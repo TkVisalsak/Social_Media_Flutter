@@ -6,7 +6,10 @@ abstract class ApiEndpoints {
   static const logout   = '/auth/logout';
 
   // Feed
-  static const feed      = '/feed';
+  static const feed      = '/feeds';
+
+  // Likes
+  static const likes     = '/likes';
 
   // Posts
   static const posts     = '/posts';

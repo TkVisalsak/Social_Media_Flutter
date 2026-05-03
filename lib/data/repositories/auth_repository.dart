@@ -52,13 +52,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final res = await _provider.login(email: email, password: password);
-      final user = UserModel.fromJson(res.data['user']);
-      final token = res.data['access_token'] as String;
-      final refreshToken = res.data['refresh_token'] as String?;
+      final body = _normalizeBody(res.data);
+      final token = _extractToken(body);
+      final refreshToken = _extractRefreshToken(body);
+      final user = _extractUser(body) ?? UserModel(id: '', email: email.trim());
+
+      if (token == null || token.isEmpty) {
+        return ApiResponse.failure('Invalid login response from server');
+      }
 
       // Persist tokens & user locally
       await LocalStorage.setToken(token);
-      if (refreshToken != null) {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
         await LocalStorage.setRefreshToken(refreshToken);
       }
       await LocalStorage.setUser(user);
@@ -67,7 +72,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AppException catch (e) {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
-      return ApiResponse.failure(e.message ?? 'Login failed');
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Login failed'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error during login');
     }
@@ -87,12 +92,17 @@ class AuthRepositoryImpl implements AuthRepository {
         password: password,
         username: username,
       );
-      final user = UserModel.fromJson(res.data['user']);
-      final token = res.data['access_token'] as String;
-      final refreshToken = res.data['refresh_token'] as String?;
+      final body = _normalizeBody(res.data);
+      final token = _extractToken(body);
+      final refreshToken = _extractRefreshToken(body);
+      final user = _extractUser(body);
+
+      if (user == null || token == null || token.isEmpty) {
+        return ApiResponse.failure('Invalid registration response from server');
+      }
 
       await LocalStorage.setToken(token);
-      if (refreshToken != null) {
+      if (refreshToken != null && refreshToken.isNotEmpty) {
         await LocalStorage.setRefreshToken(refreshToken);
       }
       await LocalStorage.setUser(user);
@@ -101,7 +111,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AppException catch (e) {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
-      return ApiResponse.failure(e.message ?? 'Registration failed');
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Registration failed'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error during registration');
     }
@@ -135,7 +145,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AppException catch (e) {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
-      return ApiResponse.failure(e.message ?? 'Request failed');
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Request failed'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error');
     }
@@ -154,7 +164,7 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AppException catch (e) {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
-      return ApiResponse.failure(e.message ?? 'Reset failed');
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Reset failed'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error');
     }
@@ -166,7 +176,12 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<ApiResponse<UserModel>> me() async {
     try {
       final res = await _provider.me();
-      final user = UserModel.fromJson(res.data['user']);
+      final body = _normalizeBody(res.data);
+      final userJson = body['user'];
+      if (userJson is! Map<String, dynamic>) {
+        return ApiResponse.failure('Invalid user response from server');
+      }
+      final user = UserModel.fromJson(userJson);
 
       // Keep local cache in sync
       await LocalStorage.setUser(user);
@@ -175,9 +190,80 @@ class AuthRepositoryImpl implements AuthRepository {
     } on AppException catch (e) {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
-      return ApiResponse.failure(e.message ?? 'Failed to fetch user');
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to fetch user'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error');
     }
+  }
+
+  Map<String, dynamic> _normalizeBody(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final nested = data['data'];
+      if (nested is Map<String, dynamic>) {
+        return nested;
+      }
+      return data;
+    }
+    return const {};
+  }
+
+  String? _extractToken(Map<String, dynamic> body) {
+    final direct = body['access_token'] ?? body['accessToken'] ?? body['token'];
+    if (direct is String && direct.trim().isNotEmpty) return direct;
+
+    final nestedAuth = body['auth'];
+    if (nestedAuth is Map<String, dynamic>) {
+      final nested = nestedAuth['access_token'] ??
+          nestedAuth['accessToken'] ??
+          nestedAuth['token'];
+      if (nested is String && nested.trim().isNotEmpty) return nested;
+    }
+    return null;
+  }
+
+  String? _extractRefreshToken(Map<String, dynamic> body) {
+    final direct = body['refresh_token'] ?? body['refreshToken'];
+    if (direct is String && direct.trim().isNotEmpty) return direct;
+
+    final nestedAuth = body['auth'];
+    if (nestedAuth is Map<String, dynamic>) {
+      final nested = nestedAuth['refresh_token'] ?? nestedAuth['refreshToken'];
+      if (nested is String && nested.trim().isNotEmpty) return nested;
+    }
+    return null;
+  }
+
+  UserModel? _extractUser(Map<String, dynamic> body) {
+    final direct = body['user'] ?? body['account'] ?? body['profile'];
+    if (direct is Map<String, dynamic>) {
+      return UserModel.fromJson(direct);
+    }
+
+    // Some APIs return the user object at top-level (with id/email fields).
+    if (body.containsKey('id') || body.containsKey('_id') || body.containsKey('email')) {
+      return UserModel.fromJson(body);
+    }
+    return null;
+  }
+
+  String _dioErrorMessage(DioException e, {required String fallback}) {
+    final wrappedError = e.error;
+    if (wrappedError is AppException) {
+      return wrappedError.message;
+    }
+
+    final responseData = e.response?.data;
+    if (responseData is Map<String, dynamic>) {
+      final message = responseData['message'] ?? responseData['error'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+
+    final msg = e.message;
+    if (msg != null && msg.trim().isNotEmpty) {
+      return msg;
+    }
+    return fallback;
   }
 }

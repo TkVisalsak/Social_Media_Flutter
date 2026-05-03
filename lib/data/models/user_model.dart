@@ -19,9 +19,26 @@ class UserModel {
     return UserModel(
       id: (json['id'] ?? json['_id'] ?? '').toString(),
       email: (json['email'] ?? '').toString(),
-      username: _nullableString(json['username']),
-      name: _nullableString(json['name'] ?? json['full_name']),
-      avatarUrl: _nullableString(json['avatar_url'] ?? json['avatar']),
+      username: _nullableString(
+        json['username'] ??
+            json['userName'] ??
+            json['user_name'] ??
+            json['handle'],
+      ),
+      name: _nullableString(
+        json['name'] ??
+            json['full_name'] ??
+            json['fullName'] ??
+            json['display_name'] ??
+            json['displayName'],
+      ),
+      avatarUrl: _nullableString(
+        json['avatar_url'] ??
+            json['avatarUrl'] ??
+            json['avatar'] ??
+            json['profilePicture'] ??
+            json['profile_picture'],
+      ),
       bio: _nullableString(json['bio']),
     );
   }
