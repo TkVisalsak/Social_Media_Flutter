@@ -7,6 +7,12 @@ import '../../modules/auth/views/login_view.dart';
 import '../../modules/auth/views/register_view.dart';
 import '../../modules/feed/bindings/feed_binding.dart';
 import '../../modules/feed/views/feed_view.dart';
+import '../../modules/onboarding/bindings/onboarding_binding.dart';
+import '../../modules/onboarding/views/onboarding_dob_view.dart';
+import '../../modules/onboarding/views/onboarding_gender_view.dart';
+import '../../modules/onboarding/views/onboarding_profile_view.dart';
+import '../../modules/onboarding/views/onboarding_hobby_view.dart';
+import '../../modules/onboarding/views/onboarding_friends_view.dart';
 import '../../modules/post_detail/bindings/post_detail_binding.dart';
 import '../../modules/post_detail/views/post_detail_view.dart';
 import '../../modules/profile/bindings/profile_binding.dart';
@@ -19,8 +25,8 @@ import '../../modules/profile/views/profile_view.dart';
 // import '../../modules/notifications/views/notifications_view.dart';
 import '../../modules/message/bindings/message_binding.dart';
 import '../../modules/message/views/message_view.dart';
-import '../../modules/reels/bindings/reels_binding.dart';
-import '../../modules/reels/views/reels_view.dart';
+import '../../modules/shorts/bindings/shorts_binding.dart';
+import '../../modules/shorts/views/shorts_view.dart';
 // import '../../modules/settings/bindings/settings_binding.dart';
 // import '../../modules/settings/views/settings_view.dart';
 import '../../core/middlewares/auth_middleware.dart';
@@ -49,6 +55,38 @@ class AppPages {
       binding: AuthBinding(),
     ),
 
+    // ── Onboarding ────────────────────────────────────
+    GetPage(
+      name:        AppRoutes.ONBOARDING_DOB,
+      page:        () => const OnboardingDobView(),
+      binding:     OnboardingBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name:        AppRoutes.ONBOARDING_GENDER,
+      page:        () => const OnboardingGenderView(),
+      binding:     OnboardingBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name:        AppRoutes.ONBOARDING_PROFILE,
+      page:        () => const OnboardingProfileView(),
+      binding:     OnboardingBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name:        AppRoutes.ONBOARDING_HOBBY,
+      page:        () => const OnboardingHobbyView(),
+      binding:     OnboardingBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+    GetPage(
+      name:        AppRoutes.ONBOARDING_FRIENDS,
+      page:        () => const OnboardingFriendsView(),
+      binding:     OnboardingBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+
     // ── Main / Feed ───────────────────────────────────
     GetPage(
       name:        AppRoutes.FEED,
@@ -73,11 +111,11 @@ class AppPages {
     //   middlewares: [AuthMiddleware()],
     // ),
 
-    // ── Reels ─────────────────────────────────────────
+    // ── Shorts ────────────────────────────────────────
     GetPage(
-      name:        AppRoutes.REELS,
-      page:        () => const ReelsView(),
-      binding:     ReelsBinding(),
+      name:        AppRoutes.SHORTS,
+      page:        () => const ShortsView(),
+      binding:     ShortsBinding(),
       middlewares: [AuthMiddleware()],
     ),
 

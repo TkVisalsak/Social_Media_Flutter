@@ -108,12 +108,12 @@ class FeedCreateFlow {
 
   static void _openReel(BuildContext context) {
     Get.snackbar(
-      'Reel',
-      'Reels are not wired up yet.',
+      'Short',
+      'Shorts are not wired up yet.',
       snackPosition: SnackPosition.BOTTOM,
       margin: const EdgeInsets.all(12),
     );
-    // When route exists: Get.toNamed(AppRoutes.REELS);
+    // When route exists: Get.toNamed(AppRoutes.SHORTS);
   }
 
   static Future<void> showPostOverlay(BuildContext context) async {
@@ -150,7 +150,7 @@ class FeedCreateFlow {
 
   static String _displayName(UserModel? u) {
     if (u == null) return 'You';
-    for (final c in [u.username, u.name, u.email]) {
+    for (final c in [u.username, u.fullName, u.email]) {
       final s = c?.trim();
       if (s != null && s.isNotEmpty) return s;
     }

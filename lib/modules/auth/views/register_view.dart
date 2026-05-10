@@ -46,17 +46,23 @@ class RegisterView extends GetView<AuthController> {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 32),
+              // Username
+              AuthTextField(
+                label: 'Username',
+                onChanged: controller.username.call,
+              ),
+              const SizedBox(height: 16),
               // Email
               AuthTextField(
                 label: 'Email',
-                onChanged: controller.email,
+                onChanged: controller.email.call,
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               // Password
               Obx(() => AuthTextField(
                     label: 'Password',
-                    onChanged: controller.password,
+                    onChanged: controller.password.call,
                     obscureText: controller.obscurePassword.value,
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -73,7 +79,7 @@ class RegisterView extends GetView<AuthController> {
               // Confirm password
               Obx(() => AuthTextField(
                     label: 'Confirm Password',
-                    onChanged: controller.confirmPassword,
+                    onChanged: controller.confirmPassword.call,
                     obscureText: controller.obscureConfirm.value,
                     suffixIcon: IconButton(
                       icon: Icon(

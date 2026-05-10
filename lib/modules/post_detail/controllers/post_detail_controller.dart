@@ -38,7 +38,6 @@ class PostDetailController extends GetxController {
         post = PostModel(
           id: (arg ?? '').toString(),
           user: const UserModel(id: '', email: ''),
-          url: '',
           createdAt: DateTime.now(),
         );
       }

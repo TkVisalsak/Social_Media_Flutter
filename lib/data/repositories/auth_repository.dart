@@ -32,6 +32,17 @@ abstract class AuthRepository {
   });
 
   Future<ApiResponse<UserModel>> me();
+
+  Future<ApiResponse<void>> updatePersonalInfo({
+    String? firstName,
+    String? lastName,
+    String? dob,
+    String? gender,
+    String? bio,
+    String? phoneNumber,
+  });
+
+  Future<ApiResponse<UserModel>> uploadProfilePic(String filePath);
 }
 
 // ─────────────────────────────────────────────
@@ -191,6 +202,74 @@ class AuthRepositoryImpl implements AuthRepository {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
       return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to fetch user'));
+    } catch (e) {
+      return ApiResponse.failure('Unexpected error');
+    }
+  }
+
+  // ── Personal info (onboarding) ────────────
+
+  @override
+  Future<ApiResponse<void>> updatePersonalInfo({
+    String? firstName,
+    String? lastName,
+    String? dob,
+    String? gender,
+    String? bio,
+    String? phoneNumber,
+  }) async {
+    try {
+      final payload = <String, dynamic>{};
+      if (firstName != null) payload['firstName'] = firstName;
+      if (lastName != null) payload['lastName'] = lastName;
+      if (dob != null) payload['dob'] = dob;
+      if (gender != null) payload['gender'] = gender;
+      if (bio != null) payload['bio'] = bio;
+      if (phoneNumber != null) payload['phoneNumber'] = phoneNumber;
+
+      await _provider.personalInfo(payload);
+
+      // Keep local cache fresh so callers can read the merged user.
+      final cached = await LocalStorage.user;
+      if (cached != null) {
+        await LocalStorage.setUser(cached.copyWith(
+          firstName: firstName ?? cached.firstName,
+          lastName: lastName ?? cached.lastName,
+          dob: dob ?? cached.dob,
+          gender: gender ?? cached.gender,
+          bio: bio ?? cached.bio,
+        ));
+      }
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to save'));
+    } catch (e) {
+      return ApiResponse.failure('Unexpected error');
+    }
+  }
+
+  // ── Profile pic upload ────────────────────
+
+  @override
+  Future<ApiResponse<UserModel>> uploadProfilePic(String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'profilePic': await MultipartFile.fromFile(filePath),
+      });
+      final res = await _provider.updateProfilePic(formData);
+      final body = _normalizeBody(res.data);
+      final user = _extractUser(body);
+      if (user == null) {
+        return ApiResponse.failure('Invalid update-profile response');
+      }
+      await LocalStorage.setUser(user);
+      return ApiResponse.success(user);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Upload failed'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error');
     }

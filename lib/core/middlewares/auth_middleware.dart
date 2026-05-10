@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
-import '../../data/providers/local_storage.dart';
 
 /// NOTE: flutter_secure_storage is async so we cannot read the token
 /// directly here. Instead the splash controller handles the initial

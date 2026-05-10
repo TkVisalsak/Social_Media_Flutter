@@ -6,10 +6,17 @@ abstract class AppRoutes {
   static const FORGOT_PASSWORD = '/forgot-password';
   static const RESET_PASSWORD  = '/reset-password';
 
+  // Onboarding
+  static const ONBOARDING_DOB     = '/onboarding/dob';
+  static const ONBOARDING_GENDER  = '/onboarding/gender';
+  static const ONBOARDING_PROFILE = '/onboarding/profile';
+  static const ONBOARDING_HOBBY   = '/onboarding/hobby';
+  static const ONBOARDING_FRIENDS = '/onboarding/friends';
+
   // Main
   static const FEED            = '/feed';
   static const SEARCH          = '/search';
-  static const REELS           = '/reels';
+  static const SHORTS          = '/shorts';
   static const SHOP            = '/shop';
 
   // Profile

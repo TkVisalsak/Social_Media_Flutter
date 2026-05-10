@@ -52,14 +52,14 @@ class LoginView extends GetView<AuthController> {
               // Email field
               AuthTextField(
                 label: 'Email',
-                onChanged: controller.email,
+                onChanged: controller.email.call,
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 16),
               // Password field
               Obx(() => AuthTextField(
                     label: 'Password',
-                    onChanged: controller.password,
+                    onChanged: controller.password.call,
                     obscureText: controller.obscurePassword.value,
                     suffixIcon: IconButton(
                       icon: Icon(

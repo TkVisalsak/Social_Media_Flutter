@@ -4,7 +4,6 @@ import '../models/post_model.dart';
 import '../network/api_response.dart';
 import '../network/exceptions/app_exception.dart';
 import '../providers/feed_provider.dart';
-import '../providers/auth_provider.dart';
 
 abstract class FeedRepository {
   Future<ApiResponse<List<PostModel>>> getFeed(int page);
@@ -18,6 +17,7 @@ class FeedRepositoryImpl implements FeedRepository {
   const FeedRepositoryImpl(this._provider);
 
   @override
+  //get feed
   Future<ApiResponse<List<PostModel>>> getFeed(int page) async {
     try {
       final res = await _provider.getFeed(page: page);
@@ -38,9 +38,9 @@ class FeedRepositoryImpl implements FeedRepository {
   }
 
   @override
+  //toggle like
   Future<ApiResponse<void>> toggleLike(String postId, {required bool wasLiked}) async {
     try {
-      // Backend spec: POST /likes/:postId (toggle/like). If you support DELETE, uncomment logic.
       await _provider.likePost(postId);
       return const ApiResponse.success(null);
     } on AppException catch (e) {
@@ -53,6 +53,7 @@ class FeedRepositoryImpl implements FeedRepository {
   }
 
   @override
+  //get likes count
   Future<ApiResponse<int>> getLikesCount(String postId) async {
     try {
       final res = await _provider.likesCount(postId);
@@ -75,6 +76,7 @@ class FeedRepositoryImpl implements FeedRepository {
   }
 
   @override
+  //save post
   Future<ApiResponse<void>> savePost(String postId) async {
     try {
       await _provider.savePost(postId);

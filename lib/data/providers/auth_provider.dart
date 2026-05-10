@@ -30,7 +30,7 @@ class AuthProvider {
       data: {
         'email': email,
         'password': password,
-        'username': username,
+        'userName': username,
       },
     );
   }
@@ -61,5 +61,13 @@ class AuthProvider {
 
   Future<Response<dynamic>> me() {
     return _dio.get('/auth/me');
+  }
+
+  Future<Response<dynamic>> personalInfo(Map<String, dynamic> data) {
+    return _dio.post(ApiEndpoints.personalInfo, data: data);
+  }
+
+  Future<Response<dynamic>> updateProfilePic(FormData formData) {
+    return _dio.put(ApiEndpoints.updateProfile, data: formData);
   }
 }

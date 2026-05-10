@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 
 import '../../../data/providers/feed_provider.dart';
 import '../../../data/repositories/feed_repository.dart';
+import '../../../data/repositories/story_repository.dart';
 import '../controllers/feed_controller.dart';
+import '../controllers/story_feed_controller.dart';
 
 class FeedBinding extends Bindings {
   @override
@@ -16,6 +18,9 @@ class FeedBinding extends Bindings {
     );
     Get.lazyPut<FeedController>(
       () => FeedController(Get.find<FeedRepository>()),
+    );
+    Get.lazyPut<StoryFeedController>(
+      () => StoryFeedController(Get.find<StoryRepository>()),
     );
   }
 }

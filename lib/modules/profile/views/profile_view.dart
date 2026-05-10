@@ -147,7 +147,7 @@ class ProfileView extends GetView<ProfileController> {
   }
 }
 
-enum _NavTab { feed, reels, direct, profile }
+enum _NavTab { feed, shorts, direct, profile }
 
 class _BottomNav extends StatelessWidget {
   final _NavTab current;
@@ -175,8 +175,8 @@ class _BottomNav extends StatelessWidget {
               ),
               IconButton(
                 icon: Icon(Icons.video_collection_outlined,
-                    color: iconColor(_NavTab.reels)),
-                onPressed: () => Get.offAllNamed(AppRoutes.REELS),
+                    color: iconColor(_NavTab.shorts)),
+                onPressed: () => Get.offAllNamed(AppRoutes.SHORTS),
               ),
               IconButton(
                 icon: Icon(Icons.send_outlined, color: iconColor(_NavTab.direct)),

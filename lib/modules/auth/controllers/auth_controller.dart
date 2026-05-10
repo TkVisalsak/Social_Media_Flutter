@@ -40,7 +40,11 @@ class AuthController extends GetxController {
 
     if (res.success) {
       AuthSession.setLoggedIn(true);   // update in-memory cache
-      Get.offAllNamed(AppRoutes.FEED);
+      final u = res.data;
+      final needsOnboarding = u == null
+          || (u.firstName?.trim().isEmpty ?? true)
+          || (u.lastName?.trim().isEmpty ?? true);
+      Get.offAllNamed(needsOnboarding ? AppRoutes.ONBOARDING_DOB : AppRoutes.FEED);
     } else {
       Get.snackbar('Login failed', res.error ?? 'Something went wrong',
           snackPosition: SnackPosition.BOTTOM);
@@ -54,22 +58,46 @@ class AuthController extends GetxController {
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
+    if (username.value.trim().isEmpty ||
+        email.value.trim().isEmpty ||
+        password.value.isEmpty) {
+      Get.snackbar('Error', 'Username, email, and password are required',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    if (password.value.length < 8) {
+      Get.snackbar('Error', 'Password must be at least 8 characters',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
     if (password.value != confirmPassword.value) {
       Get.snackbar('Error', 'Passwords do not match',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
+
+    // Backend requires a userName; if the UI didn't collect one, derive a
+    // sensible default from the email's local part. The user can change it
+    // later in the profile step.
+    final cleanedEmail = email.value.trim();
+    var resolvedUsername = username.value.trim();
+    if (resolvedUsername.isEmpty) {
+      final at = cleanedEmail.indexOf('@');
+      resolvedUsername = at > 0 ? cleanedEmail.substring(0, at) : cleanedEmail;
+    }
+
     isLoading(true);
     final res = await _repo.register(
-      email: email.value.trim(),
+      email: cleanedEmail,
       password: password.value,
-      username: username.value.trim(),
+      username: resolvedUsername,
     );
     isLoading(false);
 
     if (res.success) {
       AuthSession.setLoggedIn(true);   // update in-memory cache
-      Get.offAllNamed(AppRoutes.FEED);
+      // Newly registered users always start at onboarding.
+      Get.offAllNamed(AppRoutes.ONBOARDING_DOB);
     } else {
       Get.snackbar('Registration failed', res.error ?? 'Something went wrong',
           snackPosition: SnackPosition.BOTTOM);

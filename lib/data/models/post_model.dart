@@ -1,97 +1,104 @@
 import 'user_model.dart';
+import '../../core/utils/json_util.dart';
+
+class PostMedia {
+  final String type; // 'image' | 'video'
+  final String url;
+
+  const PostMedia({required this.type, required this.url});
+
+  factory PostMedia.fromJson(Map<String, dynamic> j) => PostMedia(
+        type: j['type'] ?? 'image',
+        url: j['url'] ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {'type': type, 'url': url};
+}
 
 class PostModel {
   final String    id;
   final UserModel user;
   /// Post media URLs (images/videos). Empty when absent.
-  final List<String> media;
-  final String    url;
+  final List<PostMedia> media;
   final String?   caption;
   final int       likesCount;
   final int       commentsCount;
   final int       sharesCount;
   final bool      isLiked;
   final bool      isSaved;
+  final String visibility; // ✅ added — backend has this
+  final List<String> hashtags; // ✅ added — backend has this
+  final String? location; // ✅ added — backend has this
+  final bool isEdited; // ✅ added — backend has this
   final DateTime  createdAt;
 
   const PostModel({
     required this.id,
     required this.user,
-    this.media = const <String>[],
-    required this.url,
+    this.media = const [],
     this.caption,
     this.likesCount    = 0,
     this.commentsCount = 0,
     this.sharesCount   = 0,
     this.isLiked       = false,
     this.isSaved       = false,
+    this.visibility    = 'public',
+    this.hashtags      = const [],
+    this.location       ,
+    this.isEdited       = false,
     required this.createdAt,
   });
+  List<String> get imageUrls => media
+      .where((m) => m.type == 'image')
+      .map((m) => m.url)
+      .toList();
+
+  List<String> get videoUrls => media
+      .where((m) => m.type == 'video')
+      .map((m) => m.url)
+      .toList();
+
+  String? get firstImageUrl => imageUrls.isNotEmpty ? imageUrls.first : null;
 
   // ── fromJson ──────────────────────────────────────
   factory PostModel.fromJson(Map<String, dynamic> j) {
-    final userJsonRaw =
-        j['user'] ?? j['author'] ?? j['owner'] ?? j['userId'] ?? j['user_id'];
-    final Map<String, dynamic> userJson;
-    if (userJsonRaw is Map) {
-      userJson = Map<String, dynamic>.from(userJsonRaw);
-    } else if (userJsonRaw is String) {
-      userJson = <String, dynamic>{'id': userJsonRaw};
-    } else {
-      userJson = <String, dynamic>{};
-    }
-
-    // Some APIs place author fields at the post level
-    userJson['username'] ??= j['username'] ?? j['userName'] ?? j['user_name'];
-    userJson['name'] ??= j['name'] ?? j['full_name'] ?? j['displayName'];
-    userJson['avatar'] ??= j['avatar'] ?? j['avatar_url'] ?? j['avatarUrl'];
-
-    final mediaRaw = j['media'] as List<dynamic>?;
-    final media = (mediaRaw ?? const <dynamic>[])
-        .map((e) {
-          if (e is String) return e;
-          if (e is Map) {
-            final m = Map<String, dynamic>.from(e);
-            return (m['url'] ?? m['src'] ?? m['path'])?.toString() ?? '';
-          }
-          return e.toString();
-        })
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList(growable: false);
-
-    final imageRaw = media.isNotEmpty ? media.first : (j['url'] ?? '');
-    final createdRaw = j['created_at'] ?? j['createdAt'];
-
     return PostModel(
-      id:            (j['id'] ?? j['_id'] ?? '').toString(),
-      user:          UserModel.fromJson(userJson),
-      media:         media,
-      url:           imageRaw.toString(),
-      caption:       _nullableString(j['caption'] ?? j['content'] ?? j['description']),
-      likesCount:    _toInt(j['likes_count'] ?? j['likesCount'] ?? j['likes']),
-      commentsCount: _toInt(j['comments_count'] ?? j['commentsCount'] ?? j['comments']),
-      sharesCount:   _toInt(j['shares_count'] ?? j['sharesCount'] ?? j['shares']),
-      isLiked:       _toBool(j['is_liked'] ?? j['isLiked']),
-      isSaved:       _toBool(j['is_saved'] ?? j['isSaved']),
-      createdAt:     _toDateTime(createdRaw),
+      id: j['id'] ?? j['_id'] ?? '',
+      user: UserModel.fromJson(j['user'] ?? {}),
+      media: (j['media'] as List?)
+              ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      caption: JsonUtils.nullableString(j['caption']),
+      likesCount: JsonUtils.toInt(j['likesCount']),
+      commentsCount: JsonUtils.toInt(j['commentsCount']),
+      sharesCount: JsonUtils.toInt(j['sharesCount']),
+      isLiked: JsonUtils.toBool(j['isLiked']),
+      isSaved: JsonUtils.toBool(j['isSaved']),
+      visibility: j['visibility'] ?? 'public',
+      hashtags: (j['hashtags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+      location: JsonUtils.nullableString(j['location']),
+      isEdited: JsonUtils.toBool(j['isEdited']),
+      createdAt: JsonUtils.toDateTime(j['createdAt']),
     );
   }
-
   // ── toJson ────────────────────────────────────────
   Map<String, dynamic> toJson() {
     return {
       'id':             id,
       'user':           user.toJson(),
-      'media':          media,
-      'image_url':      url,
+      'media':          media.map((m) => m.toJson()).toList(),
       'caption':        caption,
-      'likes_count':    likesCount,
-      'comments_count': commentsCount,
-      'shares_count':   sharesCount,
-      'is_liked':       isLiked,
-      'is_saved':       isSaved,
-      'created_at':     createdAt.toIso8601String(),
+      'likesCount':    likesCount,
+      'commentsCount': commentsCount,
+      'sharesCount':   sharesCount,
+      'isLiked':       isLiked,
+      'isSaved':       isSaved,
+      'visibility':    visibility,
+      'hashtags':      hashtags,
+      'location':      location,
+      'isEdited':      isEdited,
+      'createdAt':     createdAt.toIso8601String(),
     };
   }
 
@@ -99,27 +106,33 @@ class PostModel {
   PostModel copyWith({
     String?    id,
     UserModel? user,
-    List<String>? media,
-    String?    imageUrl,
+    List<PostMedia>? media,
     String?    caption,
     int?       likesCount,
     int?       commentsCount,
     int?       sharesCount,
     bool?      isLiked,
     bool?      isSaved,
+    String?    visibility,
+    List<String>? hashtags,
+    String?    location,
+    bool?      isEdited,
     DateTime?  createdAt,
   }) {
     return PostModel(
       id:            id            ?? this.id,
       user:          user          ?? this.user,
       media:         media         ?? this.media,
-      url:           imageUrl      ?? url,
       caption:       caption       ?? this.caption,
       likesCount:    likesCount    ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       sharesCount:   sharesCount   ?? this.sharesCount,
       isLiked:       isLiked       ?? this.isLiked,
       isSaved:       isSaved       ?? this.isSaved,
+      visibility:    visibility    ?? this.visibility,
+      hashtags:      hashtags      ?? this.hashtags,
+      location:      location      ?? this.location,
+      isEdited:      isEdited      ?? this.isEdited,
       createdAt:     createdAt     ?? this.createdAt,
     );
   }
@@ -139,25 +152,5 @@ class PostModel {
   String toString() =>
       'PostModel(id: $id, user: ${user.username}, likes: $likesCount)';
 
-  static int _toInt(dynamic value) {
-    if (value is int) return value;
-    return int.tryParse(value?.toString() ?? '') ?? 0;
-  }
 
-  static bool _toBool(dynamic value) {
-    if (value is bool) return value;
-    final v = value?.toString().toLowerCase();
-    return v == 'true' || v == '1';
-  }
-
-  static DateTime _toDateTime(dynamic value) {
-    if (value == null) return DateTime.now();
-    return DateTime.tryParse(value.toString()) ?? DateTime.now();
-  }
-
-  static String? _nullableString(dynamic value) {
-    if (value == null) return null;
-    final s = value.toString().trim();
-    return s.isEmpty ? null : s;
-  }
 }

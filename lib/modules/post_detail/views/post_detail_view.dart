@@ -49,7 +49,7 @@ class PostDetailView extends GetView<PostDetailController> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _CommentTile(
-                          username: p.user.username ?? p.user.name ?? 'User',
+                          username: p.user.username ?? p.user.fullName ?? 'User',
                           text: p.text,
                           onReply: () => controller.startReply(p),
                           onDelete: () => controller.deleteComment(p),
@@ -76,7 +76,7 @@ class PostDetailView extends GetView<PostDetailController> {
         Obx(() {
           final replying = controller.replyTo.value;
           if (replying == null) return const SizedBox.shrink();
-          final name = replying.user.username ?? replying.user.name ?? 'User';
+          final name = replying.user.username ?? replying.user.fullName ?? 'User';
           return Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
