@@ -18,8 +18,10 @@ import '../../modules/onboarding/views/onboarding_hobby_view.dart';
 import '../../modules/onboarding/views/onboarding_profile_view.dart';
 import '../../modules/post_detail/bindings/post_detail_binding.dart';
 import '../../modules/post_detail/views/post_detail_view.dart';
+import '../../modules/profile/bindings/other_profile_binding.dart';
 import '../../modules/profile/bindings/profile_binding.dart';
 import '../../modules/profile/views/edit_profile_view.dart';
+import '../../modules/profile/views/other_profile_view.dart';
 import '../../modules/splash/bindings/splash_binding.dart';
 import '../../modules/splash/views/splash_view.dart';
 import 'app_routes.dart';
@@ -92,6 +94,14 @@ class AppPages {
       name:        AppRoutes.POST_DETAIL,
       page:        () => const PostDetailView(),
       binding:     PostDetailBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+
+    // ── Other Profile ─────────────────────────────────
+    GetPage(
+      name:        AppRoutes.OTHER_PROFILE,
+      page:        () => const OtherProfileView(),
+      binding:     OtherProfileBinding(),
       middlewares: [AuthMiddleware()],
     ),
 

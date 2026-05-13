@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../profile/views/other_profile_view.dart';
+import 'package:get/get.dart';
+
+import '../../../app/routes/app_routes.dart';
+import '../../../data/models/user_model.dart';
 import '../models/story_viewer_item.dart';
 import '../models/story_viewer_user.dart';
 
@@ -273,14 +276,15 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
                   GestureDetector(
                     onTap: () {
                       _pauseStory();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => OtherProfileView(
+                      Get.toNamed(
+                        AppRoutes.OTHER_PROFILE,
+                        arguments: UserModel(
+                          id: '',
+                          email: '',
                           username: user.username,
-                          profileImage: user.profileImage,
-                          isNetworkImage: user.isNetworkImage,
-                        )),
-                      ).then((_) => _resumeStory());
+                          profilePic: user.isNetworkImage ? user.profileImage : null,
+                        ),
+                      )?.then((_) => _resumeStory());
                     },
                     child: Row(
                       children: [

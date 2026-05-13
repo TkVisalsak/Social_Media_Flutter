@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/post_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/providers/comments_provider.dart';
+import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/comments_repository.dart';
 import '../../../data/repositories/feed_repository.dart';
 import '../../../app/routes/app_routes.dart';
@@ -67,8 +69,8 @@ class FeedController extends GetxController {
     final index = posts.indexWhere((p) => p.id == postId);
     if (index < 0) return;
 
-    // Optimistic update
     final old = posts[index];
+    // Optimistic update
     posts[index] = old.copyWith(
       isLiked:    !old.isLiked,
       likesCount: old.isLiked ? old.likesCount - 1 : old.likesCount + 1,
@@ -77,19 +79,60 @@ class FeedController extends GetxController {
 
     final res = await _repo.toggleLike(postId, wasLiked: old.isLiked);
     if (!res.success) {
-      // Rollback on failure
       posts[index] = old;
       posts.refresh();
-      return;
+    }
+  }
+
+  // ── Create post ──────────────────────────────────
+  final isCreating = false.obs;
+
+  Future<bool> createPost({
+    String? caption,
+    String? imagePath,
+    String visibility = 'public',
+    String? location,
+  }) async {
+    isCreating(true);
+    final me = await LocalStorage.user;
+    final res = await _repo.createPost(
+      caption: caption,
+      filePath: imagePath,
+      visibility: visibility,
+      location: location,
+    );
+    isCreating(false);
+
+    if (res.success && res.data != null) {
+      // Backend returns post without populated user — inject from LocalStorage.
+      final post = res.data!.copyWith(
+        user: me ?? const UserModel(id: '', email: ''),
+      );
+      posts.insert(0, post);
+      posts.refresh();
+      return true;
     }
 
-    // Sync count from server (if endpoint exists)
-    final countRes = await _repo.getLikesCount(postId);
-    if (countRes.success) {
-      final current = posts[index];
-      posts[index] = current.copyWith(likesCount: countRes.data ?? current.likesCount);
-      posts.refresh();
-    }
+    Get.snackbar('Error', res.error ?? 'Failed to create post',
+        snackPosition: SnackPosition.BOTTOM);
+    return false;
+  }
+
+  // ── Comment count ────────────────────────────────
+  void incrementCommentCount(String postId) {
+    final i = posts.indexWhere((p) => p.id == postId);
+    if (i < 0) return;
+    posts[i] = posts[i].copyWith(commentsCount: posts[i].commentsCount + 1);
+    posts.refresh();
+  }
+
+  // ── Repost ───────────────────────────────────────
+  void toggleRepost(String postId, {required bool reposted}) {
+    final i = posts.indexWhere((p) => p.id == postId);
+    if (i < 0) return;
+    final delta = reposted ? 1 : -1;
+    posts[i] = posts[i].copyWith(sharesCount: posts[i].sharesCount + delta);
+    posts.refresh();
   }
 
   // ── Save ─────────────────────────────────────────

@@ -13,6 +13,7 @@ class RepostProvider {
   }) =>
       _dio.post(ApiEndpoints.repostFeed, data: {
         'contentId': contentId,
+        'contentType': 'feed',
         if (caption != null) 'caption': caption,
         'visibility': visibility,
       });
@@ -24,6 +25,7 @@ class RepostProvider {
   }) =>
       _dio.post(ApiEndpoints.repostShort, data: {
         'contentId': contentId,
+        'contentType': 'short',
         if (caption != null) 'caption': caption,
         'visibility': visibility,
       });

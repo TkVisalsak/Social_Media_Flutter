@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../../data/models/short_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/short_repository.dart';
 
 class ShortsController extends GetxController {
@@ -27,6 +29,34 @@ class ShortsController extends GetxController {
       error.value = res.error;
     }
     isLoading.value = false;
+  }
+
+  Future<bool> createShort({required String filePath, String? caption}) async {
+    isLoading(true);
+    final me  = await LocalStorage.user;
+    final res = await _repo.uploadShort(filePath: filePath, caption: caption);
+    isLoading(false);
+
+    if (res.success && res.data != null) {
+      final short = res.data!.copyWith(
+        user: me ?? const UserModel(id: '', email: ''),
+      );
+      shorts.insert(0, short);
+      Get.snackbar('Reel shared!', 'Your reel is now live.',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3));
+      return true;
+    }
+
+    Get.snackbar('Upload failed', res.error ?? 'Try again',
+        snackPosition: SnackPosition.BOTTOM);
+    return false;
+  }
+
+  void incrementCommentCount(String shortId) {
+    final i = shorts.indexWhere((s) => s.id == shortId);
+    if (i < 0) return;
+    shorts[i] = shorts[i].copyWith(commentCount: shorts[i].commentCount + 1);
   }
 
   /// Optimistically toggles the like on the given short and persists to the API.

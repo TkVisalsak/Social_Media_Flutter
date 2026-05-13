@@ -30,4 +30,7 @@ class UserProvider {
       _dio.put(ApiEndpoints.updateProfile, data: {'profilePic': profilePicUrl});
 
   Future<Response<dynamic>> getEmail() => _dio.get('/auth/getUserEmail');
+
+  Future<Response<dynamic>> searchUsers(String q, {int limit = 20}) =>
+      _dio.get(ApiEndpoints.search, queryParameters: {'q': q, 'limit': limit});
 }

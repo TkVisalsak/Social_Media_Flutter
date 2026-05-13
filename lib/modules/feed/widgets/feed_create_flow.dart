@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 
 import '../../../data/models/user_model.dart';
 import '../../../data/providers/local_storage.dart';
+import '../../shorts/screens/create_short_screen.dart';
+import '../../story/screens/create_story_screen.dart';
+import '../controllers/feed_controller.dart';
 
 /// Facebook-style "Create" shortcuts and post composer overlay.
 class FeedCreateFlow {
@@ -97,23 +100,17 @@ class FeedCreateFlow {
   }
 
   static void _openStory(BuildContext context) {
-    Get.snackbar(
-      'Story',
-      'Story camera is not wired up yet.',
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(12),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CreateStoryScreen()),
     );
-    // When route exists: Get.toNamed(AppRoutes.STORY);
   }
 
   static void _openReel(BuildContext context) {
-    Get.snackbar(
-      'Short',
-      'Shorts are not wired up yet.',
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(12),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const CreateShortScreen()),
     );
-    // When route exists: Get.toNamed(AppRoutes.SHORTS);
   }
 
   static Future<void> showPostOverlay(BuildContext context) async {
@@ -218,8 +215,9 @@ class _CreatePostOverlayPage extends StatefulWidget {
 }
 
 class _CreatePostOverlayPageState extends State<_CreatePostOverlayPage> {
-  final _text = TextEditingController();
+  final _text   = TextEditingController();
   bool _canPost = false;
+  bool _sending = false;
 
   @override
   void initState() {
@@ -236,16 +234,15 @@ class _CreatePostOverlayPageState extends State<_CreatePostOverlayPage> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_text.text.trim().isEmpty) return;
-    Navigator.of(context).pop();
-    Get.snackbar(
-      'Post',
-      'Your update is ready to send when the API is connected.',
-      snackPosition: SnackPosition.BOTTOM,
-      margin: const EdgeInsets.all(12),
-      duration: const Duration(seconds: 3),
+  Future<void> _submit() async {
+    if (_text.text.trim().isEmpty || _sending) return;
+    setState(() => _sending = true);
+    final ok = await Get.find<FeedController>().createPost(
+      caption: _text.text.trim(),
     );
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (ok) Navigator.of(context).pop();
   }
 
   @override
@@ -287,18 +284,28 @@ class _CreatePostOverlayPageState extends State<_CreatePostOverlayPage> {
                           ),
                         ),
                       ),
-                      TextButton(
-                        onPressed: _canPost ? _submit : null,
-                        child: Text(
-                          'POST',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: _canPost
-                                ? const Color(0xFF1877F2)
-                                : Colors.grey,
-                          ),
-                        ),
-                      ),
+                      _sending
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16),
+                              child: SizedBox(
+                                width: 20, height: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Color(0xFF1877F2)),
+                              ),
+                            )
+                          : TextButton(
+                              onPressed: _canPost ? _submit : null,
+                              child: Text(
+                                'POST',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: _canPost
+                                      ? const Color(0xFF1877F2)
+                                      : Colors.grey,
+                                ),
+                              ),
+                            ),
                     ],
                   ),
                 ),

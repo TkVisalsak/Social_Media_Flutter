@@ -9,6 +9,7 @@ import 'repo_helpers.dart';
 
 abstract class ShortRepository {
   Future<ApiResponse<List<ShortModel>>> getAllShorts();
+  Future<ApiResponse<List<ShortModel>>> getByUser(String userId);
   Future<ApiResponse<ShortModel>> uploadShort({
     required String filePath,
     String? caption,
@@ -36,6 +37,27 @@ class ShortRepositoryImpl implements ShortRepository {
       final res = await _provider.getAll();
       final list =
           RepoHelpers.extractList(res.data, keys: ['videos', 'shorts', 'data']);
+      final shorts = list
+          .map((e) => RepoHelpers.asMap(e))
+          .whereType<Map<String, dynamic>>()
+          .map(ShortModel.fromJson)
+          .toList();
+      return ApiResponse.success(shorts);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load shorts'));
+    } catch (e) {
+      return ApiResponse.failure('Shorts parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<ShortModel>>> getByUser(String userId) async {
+    try {
+      final res = await _provider.getByUser(userId);
+      final list = RepoHelpers.extractList(res.data, keys: ['videos', 'shorts', 'data']);
       final shorts = list
           .map((e) => RepoHelpers.asMap(e))
           .whereType<Map<String, dynamic>>()

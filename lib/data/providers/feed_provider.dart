@@ -42,4 +42,23 @@ class FeedProvider {
   Future<Response<dynamic>> unsavePost(String postId) {
     return _dio.delete('${ApiEndpoints.posts}/$postId/save');
   }
+
+  Future<Response<dynamic>> getUserPosts(String userId, {int page = 1, int limit = 12}) =>
+      _dio.get('${ApiEndpoints.feedsByUser}/$userId',
+          queryParameters: {'page': page, 'limit': limit});
+
+  Future<Response<dynamic>> createPost({
+    String? caption,
+    String? filePath,
+    String visibility = 'public',
+    String? location,
+  }) async {
+    final form = FormData.fromMap({
+      if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
+      'visibility': visibility,
+      if (location != null && location.isNotEmpty) 'location': location,
+      if (filePath != null) 'file': await MultipartFile.fromFile(filePath),
+    });
+    return _dio.post(ApiEndpoints.feeds, data: form);
+  }
 }

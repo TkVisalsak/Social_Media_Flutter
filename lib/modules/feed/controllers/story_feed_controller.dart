@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 
 import '../../../data/models/story_model.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/story_repository.dart';
 
 /// Loads the home stories bar (one row per user with active stories).
@@ -25,6 +27,42 @@ class StoryFeedController extends GetxController {
   void onInit() {
     super.onInit();
     fetch();
+  }
+
+  Future<bool> createStory({
+    required String filePath,
+    String type       = 'image',
+    String visibility = 'public',
+  }) async {
+    isLoading(true);
+    final me  = await LocalStorage.user;
+    final res = await _repo.create(
+        filePath: filePath, type: type, visibility: visibility);
+    isLoading(false);
+
+    if (res.success && res.data != null) {
+      // Backend doesn't populate userId — inject current user.
+      final story = res.data!;
+      final withUser = StoryModel(
+        id:         story.id,
+        user:       me ?? const UserModel(id: '', email: ''),
+        mediaUrl:   story.mediaUrl,
+        type:       story.type,
+        viewers:    story.viewers,
+        visibility: story.visibility,
+        expiresAt:  story.expiresAt,
+        createdAt:  story.createdAt,
+      );
+      stories.insert(0, withUser);
+      Get.snackbar('Story shared!', 'Your story is live for 24 h.',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3));
+      return true;
+    }
+
+    Get.snackbar('Upload failed', res.error ?? 'Try again',
+        snackPosition: SnackPosition.BOTTOM);
+    return false;
   }
 
   Future<void> fetch() async {

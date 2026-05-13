@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../controllers/feed_controller.dart';
 
 // ─── Audience enum ────────────────────────────────────────────────────────────
 
@@ -85,11 +87,12 @@ class CreatePostScreen extends StatefulWidget {
 class _CreatePostScreenState extends State<CreatePostScreen> {
   final _textCtrl = TextEditingController();
 
-  PostAudience     _audience = PostAudience.public;
-  List<XFile>      _images   = [];
-  List<String>     _tagged   = [];
+  PostAudience     _audience  = PostAudience.public;
+  List<XFile>      _images    = [];
+  List<String>     _tagged    = [];
   String?          _feeling;
   String?          _location;
+  bool             _isPosting = false;
 
   @override
   void initState() {
@@ -159,17 +162,30 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (result != null) setState(() => _tagged = result);
   }
 
-  void _submitPost() {
-    // TODO: integrate with controller
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:  const Text('Post shared!'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-        shape:    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+  Future<void> _submitPost() async {
+    if (!_canPost || _isPosting) return;
+    setState(() => _isPosting = true);
+
+    final visibility = switch (_audience) {
+      PostAudience.public   => 'public',
+      PostAudience.onlyMe   => 'private',
+      _                     => 'followers',
+    };
+
+    // Build caption: combine text, feeling tag, and location label.
+    var caption = _textCtrl.text.trim();
+    if (_feeling != null) caption = '$caption — feeling $_feeling'.trim();
+
+    final ok = await Get.find<FeedController>().createPost(
+      caption:    caption.isEmpty ? null : caption,
+      imagePath:  _images.isNotEmpty ? _images.first.path : null,
+      visibility: visibility,
+      location:   _location,
     );
-    Navigator.pop(context);
+
+    if (!mounted) return;
+    setState(() => _isPosting = false);
+    if (ok) Navigator.pop(context);
   }
 
   // ── Build ────────────────────────────────────────────────────────────────────
@@ -182,7 +198,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         child: Column(
           children: [
             // ── App bar ──────────────────────────────────────────────────
-            _AppBar(canPost: _canPost, onPost: _submitPost),
+            _AppBar(canPost: _canPost && !_isPosting, isLoading: _isPosting, onPost: _submitPost),
             const Divider(height: 1, thickness: 0.5),
 
             // ── Scrollable content ────────────────────────────────────────
@@ -277,8 +293,9 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
 class _AppBar extends StatelessWidget {
   final bool         canPost;
+  final bool         isLoading;
   final VoidCallback onPost;
-  const _AppBar({required this.canPost, required this.onPost});
+  const _AppBar({required this.canPost, required this.isLoading, required this.onPost});
 
   @override
   Widget build(BuildContext context) {
@@ -299,23 +316,29 @@ class _AppBar extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 180),
-              opacity:  canPost ? 1.0 : 0.45,
-              child: ElevatedButton(
-                onPressed: canPost ? onPost : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  foregroundColor: Colors.white,
-                  elevation:       0,
-                  padding:         const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text('Post', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              ),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 22, height: 22,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.primaryBlue))
+                : AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity:  canPost ? 1.0 : 0.45,
+                    child: ElevatedButton(
+                      onPressed: canPost ? onPost : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryBlue,
+                        foregroundColor: Colors.white,
+                        elevation:       0,
+                        padding:         const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text('Post', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                    ),
+                  ),
           ),
         ],
       ),

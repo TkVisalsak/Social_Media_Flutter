@@ -47,7 +47,7 @@ class OnboardingFriendsView extends GetView<OnboardingController> {
                 padding: EdgeInsets.symmetric(vertical: 32),
                 child: Center(
                   child: Text(
-                    'No matches yet — try adding more interests.',
+                    'No suggestions yet — you can find people to follow later.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Color(0xFF64748B)),
                   ),

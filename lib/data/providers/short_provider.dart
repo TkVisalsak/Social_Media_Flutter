@@ -45,4 +45,7 @@ class ShortProvider {
 
   Future<Response<dynamic>> deleteComment(String commentId) =>
       _dio.delete('${ApiEndpoints.shortComments}/$commentId');
+
+  Future<Response<dynamic>> getByUser(String userId) =>
+      _dio.get('${ApiEndpoints.shortsByUser}/$userId');
 }

@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../../../data/models/short_model.dart';
-import '../../profile/views/other_profile_view.dart';
 import '../controllers/shorts_controller.dart';
 import 'reel_comments_sheet.dart';
 import 'reel_share_sheet.dart';
@@ -26,6 +28,7 @@ class _ReelItemState extends State<ReelItem> {
   VideoPlayerController? _ctrl;
   bool _showHeart   = false;
   bool _isFollowing = false;
+  Timer? _tapTimer;
 
   // ── Video lifecycle ───────────────────────────────────────────
 
@@ -64,6 +67,7 @@ class _ReelItemState extends State<ReelItem> {
 
   @override
   void dispose() {
+    _tapTimer?.cancel();
     _ctrl?.removeListener(_onVideoStateChange);
     _ctrl?.dispose();
     super.dispose();
@@ -71,9 +75,25 @@ class _ReelItemState extends State<ReelItem> {
 
   // ── Gesture handlers ─────────────────────────────────────────
 
-  void _onTap() {
+  // Single tap handling is delayed by Flutter 300ms when onDoubleTap is also
+  // registered. Instead we manage the double-tap detection ourselves so single
+  // tap (pause/play) fires after only 220ms and double tap fires instantly on
+  // the second tap without any delay.
+  void _handleTap() {
+    if (_tapTimer != null) {
+      _tapTimer!.cancel();
+      _tapTimer = null;
+      _onDoubleTap();
+      return;
+    }
+    _tapTimer = Timer(const Duration(milliseconds: 220), () {
+      _tapTimer = null;
+      _onSingleTap();
+    });
+  }
+
+  void _onSingleTap() {
     if (_ctrl == null || !_ctrl!.value.isInitialized) return;
-    // pause / play — listener will call setState when value actually changes
     _ctrl!.value.isPlaying ? _ctrl!.pause() : _ctrl!.play();
   }
 
@@ -100,7 +120,10 @@ class _ReelItemState extends State<ReelItem> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => ReelCommentsSheet(commentCount: widget.short.commentCount),
+      builder: (_) => ReelCommentsSheet(
+        shortId: widget.short.id,
+        commentCount: widget.short.commentCount,
+      ),
     ).whenComplete(_resumeIfActive);
   }
 
@@ -116,16 +139,8 @@ class _ReelItemState extends State<ReelItem> {
 
   void _openProfile() {
     _ctrl?.pause();
-    final username   = widget.short.user.username ?? widget.short.user.fullName ?? 'user';
-    final profilePic = widget.short.user.profilePic ?? '';
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => OtherProfileView(
-        username: username,
-        profileImage: profilePic,
-        isNetworkImage: profilePic.startsWith('http'),
-      )),
-    ).whenComplete(_resumeIfActive);
+    Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: widget.short.user)
+        ?.whenComplete(_resumeIfActive);
   }
 
   void _resumeIfActive() {
@@ -139,14 +154,15 @@ class _ReelItemState extends State<ReelItem> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad  = MediaQuery.of(context).padding.bottom;
-    final username   = widget.short.user.username ?? 'user';
-    final profilePic = widget.short.user.profilePic;
+    final bottomPad     = MediaQuery.of(context).padding.bottom;
+    const navBarH       = 65.0; // AnimatedNavBar fixed height
+    final contentBottom = bottomPad + navBarH + 12;
+    final username      = widget.short.user.username ?? widget.short.user.fullName ?? 'user';
+    final profilePic    = widget.short.user.profilePic;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: _onTap,
-      onDoubleTap: _onDoubleTap,
+      onTap: _handleTap,
       child: SizedBox.expand(
         child: Stack(
           children: [
@@ -202,7 +218,7 @@ class _ReelItemState extends State<ReelItem> {
             // ── Right actions ────────────────────────────────
             Positioned(
               right: 10,
-              bottom: bottomPad + 100,
+              bottom: contentBottom,
               child: Column(
                 children: [
                   // Avatar
@@ -268,7 +284,7 @@ class _ReelItemState extends State<ReelItem> {
             Positioned(
               left: 16,
               right: 80,
-              bottom: bottomPad + 100,
+              bottom: contentBottom,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

@@ -18,6 +18,7 @@ abstract class UserRepository {
   });
   Future<ApiResponse<UserModel>> updateProfilePic(String profilePicUrl);
   Future<ApiResponse<String?>> getEmail();
+  Future<ApiResponse<List<UserModel>>> search(String q);
 }
 
 class UserRepositoryImpl implements UserRepository {
@@ -108,6 +109,26 @@ class UserRepositoryImpl implements UserRepository {
           fallback: 'Failed to update profile picture'));
     } catch (e) {
       return ApiResponse.failure('Profile pic update failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<UserModel>>> search(String q) async {
+    try {
+      final res = await _provider.searchUsers(q);
+      final list = RepoHelpers.extractList(res.data, keys: ['data', 'users']);
+      final users = list
+          .whereType<Map<String, dynamic>>()
+          .map(UserModel.fromJson)
+          .toList();
+      return ApiResponse.success(users);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Search failed'));
+    } catch (e) {
+      return ApiResponse.failure('Search error: $e');
     }
   }
 

@@ -375,9 +375,11 @@ class _StoryPrivacyScreenState
                       ),
 
                       onPressed: () {
-
+                        // Return the selected privacy value (lowercased to
+                        // match the backend visibility enum).
                         Navigator.pop(
                           context,
+                          selectedPrivacy.toLowerCase(),
                         );
                       },
 

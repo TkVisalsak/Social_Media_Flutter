@@ -70,7 +70,8 @@ class FeedView extends GetView<FeedController> {
                                 )
                               : const SizedBox(height: 80);
                         }
-                        return PostCard(post: controller.posts[index]);
+                        final post = controller.posts[index];
+                        return PostCard(key: ValueKey(post.id), post: post);
                       },
                       childCount: controller.posts.length + 1,
                     ),

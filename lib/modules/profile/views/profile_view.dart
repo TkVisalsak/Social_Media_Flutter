@@ -26,7 +26,10 @@ class ProfileView extends GetView<ProfileController> {
         )),
         actions: [
           IconButton(icon: const Icon(Icons.add_box_outlined), onPressed: () {}),
-          IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () => _showOptionsMenu(context),
+          ),
         ],
       ),
       body: Obx(() {
@@ -179,8 +182,8 @@ class ProfileView extends GetView<ProfileController> {
             },
             body: TabBarView(
               children: [
-                _buildPhotoGrid(),
-                const Center(child: Text('No Reels yet')),
+                _buildPostsGrid(),
+                _buildShortsGrid(),
                 const Center(child: Text('Photos and videos of you')),
               ],
             ),
@@ -190,23 +193,89 @@ class ProfileView extends GetView<ProfileController> {
     );
   }
 
-  Widget _buildPhotoGrid() {
-    return GridView.builder(
-      padding: EdgeInsets.zero,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 1,
-        mainAxisSpacing: 1,
+  void _showOptionsMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      itemCount: 9,
-      itemBuilder: (context, index) {
-        return Image.network(
-          'https://picsum.photos/id/${index + 10}/300/300',
-          fit: BoxFit.cover,
-          errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
-        );
-      },
+      builder: (_) => _ProfileOptionsSheet(onLogout: controller.logout),
     );
+  }
+
+  Widget _buildPostsGrid() {
+    return Obx(() {
+      if (controller.isContentLoading.value && controller.myPosts.isEmpty) {
+        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      }
+      if (controller.myPosts.isEmpty) {
+        return const Center(
+          child: Text('No posts yet', style: TextStyle(color: Colors.grey)),
+        );
+      }
+      return GridView.builder(
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
+        ),
+        itemCount: controller.myPosts.length,
+        itemBuilder: (context, i) {
+          final url = controller.myPosts[i].firstImageUrl;
+          if (url == null || url.isEmpty) {
+            return Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_outlined, color: Colors.grey),
+            );
+          }
+          return Image.network(
+            url, fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildShortsGrid() {
+    return Obx(() {
+      if (controller.isContentLoading.value && controller.myShorts.isEmpty) {
+        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      }
+      if (controller.myShorts.isEmpty) {
+        return const Center(
+          child: Text('No reels yet', style: TextStyle(color: Colors.grey)),
+        );
+      }
+      return GridView.builder(
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
+        ),
+        itemCount: controller.myShorts.length,
+        itemBuilder: (context, i) {
+          final short = controller.myShorts[i];
+          final thumb = short.thumbnailUrl;
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              if (thumb != null && thumb.isNotEmpty)
+                Image.network(thumb, fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(color: Colors.black))
+              else
+                Container(color: Colors.black),
+              const Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    });
   }
 }
 
@@ -308,6 +377,86 @@ class _HighlightItem extends StatelessWidget {
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(fontSize: 12)),
         ],
+      ),
+    );
+  }
+}
+
+class _ProfileOptionsSheet extends StatelessWidget {
+  const _ProfileOptionsSheet({required this.onLogout});
+
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // drag handle
+          Container(
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _MenuItem(icon: Icons.settings_outlined,      label: 'Settings'),
+          _MenuItem(icon: Icons.archive_outlined,       label: 'Archive'),
+          _MenuItem(icon: Icons.bar_chart_outlined,     label: 'Your activity'),
+          _MenuItem(icon: Icons.notifications_outlined, label: 'Notifications'),
+          _MenuItem(icon: Icons.qr_code_outlined,       label: 'QR code'),
+          _MenuItem(icon: Icons.bookmark_border,        label: 'Saved'),
+          const Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16),
+          _MenuItem(
+            icon: Icons.logout,
+            label: 'Log out',
+            color: Colors.red,
+            onTap: () {
+              Navigator.of(context).pop();
+              onLogout();
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuItem extends StatelessWidget {
+  const _MenuItem({
+    required this.icon,
+    required this.label,
+    this.color,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? Colors.black;
+    return InkWell(
+      onTap: onTap ?? () => Navigator.of(context).pop(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 24, color: c),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: TextStyle(fontSize: 15, color: c, fontWeight: FontWeight.w400),
+            ),
+          ],
+        ),
       ),
     );
   }

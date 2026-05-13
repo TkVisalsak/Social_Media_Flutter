@@ -33,6 +33,7 @@ class OnboardingController extends GetxController {
 
   final suggestions = <HobbySuggestion>[].obs;
   final followedIds = <String>{}.obs;
+  bool _suggestionsFetched = false;
 
   // ── UI state ──────────────────────────────
   final isLoading = false.obs;
@@ -128,6 +129,7 @@ class OnboardingController extends GetxController {
     isSaving(false);
     if (res.success) {
       error('');
+      _suggestionsFetched = false; // allow fresh load on friends screen
       Get.toNamed(AppRoutes.ONBOARDING_FRIENDS);
     } else {
       error(res.error ?? 'Failed to save');
@@ -135,13 +137,15 @@ class OnboardingController extends GetxController {
   }
 
   Future<void> loadSuggestions() async {
+    if (_suggestionsFetched || isLoading.value) return;
+    _suggestionsFetched = true;
     isLoading(true);
-    final res = await hobbyRepo.getSuggestions(min: 3);
+    final res = await hobbyRepo.getSuggestions(min: 1);
     isLoading(false);
     if (res.success) {
       suggestions.assignAll(res.data ?? []);
     } else {
-      error(res.error ?? 'Failed to load');
+      error(res.error ?? 'Failed to load suggestions');
     }
   }
 

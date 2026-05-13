@@ -62,9 +62,10 @@ class PostModel {
 
   // ── fromJson ──────────────────────────────────────
   factory PostModel.fromJson(Map<String, dynamic> j) {
+    final userRaw = j['user'] ?? j['author'] ?? {};
     return PostModel(
       id: j['id'] ?? j['_id'] ?? '',
-      user: UserModel.fromJson(j['user'] ?? {}),
+      user: UserModel.fromJson(userRaw is Map ? Map<String, dynamic>.from(userRaw) : {}),
       media: (j['media'] as List?)
               ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
               .toList() ??

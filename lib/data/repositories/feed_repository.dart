@@ -7,7 +7,11 @@ import '../providers/feed_provider.dart';
 
 abstract class FeedRepository {
   Future<ApiResponse<List<PostModel>>> getFeed(int page);
+  Future<ApiResponse<List<PostModel>>> getUserPosts(String userId, {int page = 1});
   Future<ApiResponse<PostModel>>       getPostById(String postId);
+  Future<ApiResponse<PostModel>>       createPost({
+    String? caption, String? filePath, String visibility, String? location,
+  });
   Future<ApiResponse<void>>            toggleLike(String postId, {required bool wasLiked});
   Future<ApiResponse<int>>             getLikesCount(String postId);
   Future<ApiResponse<void>>            savePost(String postId);
@@ -16,6 +20,53 @@ abstract class FeedRepository {
 class FeedRepositoryImpl implements FeedRepository {
   final FeedProvider _provider;
   const FeedRepositoryImpl(this._provider);
+
+  @override
+  Future<ApiResponse<List<PostModel>>> getUserPosts(String userId, {int page = 1}) async {
+    try {
+      final res = await _provider.getUserPosts(userId, page: page);
+      final rawList = _extractFeedList(res.data);
+      final posts = rawList
+          .map((j) => _asMap(j))
+          .whereType<Map<String, dynamic>>()
+          .map(PostModel.fromJson)
+          .toList();
+      return ApiResponse.success(posts);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to load posts'));
+    } catch (e) {
+      return ApiResponse.failure('Posts parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<PostModel>> createPost({
+    String? caption,
+    String? filePath,
+    String visibility = 'public',
+    String? location,
+  }) async {
+    try {
+      final res = await _provider.createPost(
+        caption: caption, filePath: filePath,
+        visibility: visibility, location: location,
+      );
+      final body = _normalizeBody(res.data);
+      final raw = body['data'] ?? body;
+      if (raw is! Map<String, dynamic>) {
+        return ApiResponse.failure('Invalid response from server');
+      }
+      return ApiResponse.success(PostModel.fromJson(raw));
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to create post'));
+    } catch (e) {
+      return ApiResponse.failure('Create post failed: $e');
+    }
+  }
 
   @override
   Future<ApiResponse<PostModel>> getPostById(String postId) async {
