@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/middlewares/auth_middleware.dart';
+import '../../../core/services/socket_service.dart';
 import '../../../data/repositories/auth_repository.dart';
 
 class AuthController extends GetxController {
@@ -39,12 +40,13 @@ class AuthController extends GetxController {
     isLoading(false);
 
     if (res.success) {
-      AuthSession.setLoggedIn(true);   // update in-memory cache
+      AuthSession.setLoggedIn(true);
+      Get.find<SocketService>().connect();
       final u = res.data;
       final needsOnboarding = u == null
           || (u.firstName?.trim().isEmpty ?? true)
           || (u.lastName?.trim().isEmpty ?? true);
-      Get.offAllNamed(needsOnboarding ? AppRoutes.ONBOARDING_DOB : AppRoutes.FEED);
+      Get.offAllNamed(needsOnboarding ? AppRoutes.ONBOARDING_DOB : AppRoutes.MAIN);
     } else {
       Get.snackbar('Login failed', res.error ?? 'Something went wrong',
           snackPosition: SnackPosition.BOTTOM);
@@ -95,8 +97,8 @@ class AuthController extends GetxController {
     isLoading(false);
 
     if (res.success) {
-      AuthSession.setLoggedIn(true);   // update in-memory cache
-      // Newly registered users always start at onboarding.
+      AuthSession.setLoggedIn(true);
+      Get.find<SocketService>().connect();
       Get.offAllNamed(AppRoutes.ONBOARDING_DOB);
     } else {
       Get.snackbar('Registration failed', res.error ?? 'Something went wrong',
@@ -107,7 +109,8 @@ class AuthController extends GetxController {
   // ── Logout ────────────────────────────────────────
   Future<void> logout() async {
     await _repo.logout();
-    AuthSession.setLoggedIn(false);  // clear in-memory cache
+    AuthSession.setLoggedIn(false);
+    Get.find<SocketService>().disconnect();
     Get.offAllNamed(AppRoutes.LOGIN);
   }
 

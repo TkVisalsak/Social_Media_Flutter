@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/widgets/app_bottom_navbar.dart';
+import '../../../core/theme/app_colors.dart';
 import '../controllers/feed_controller.dart';
 import '../widgets/home_appbar.dart';
 import '../widgets/post_card.dart';
@@ -13,16 +13,14 @@ class FeedView extends GetView<FeedController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF7),
-      bottomNavigationBar: const AppBottomNavBar(current: AppNavTab.home),
+      backgroundColor: AppColors.feedBackground,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(
           onRefresh: () => controller.fetchFeed(refresh: true),
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
-              if (notification.metrics.pixels >=
-                  notification.metrics.maxScrollExtent - 200) {
+              if (notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
                 controller.fetchFeed();
               }
               return false;
@@ -34,51 +32,45 @@ class FeedView extends GetView<FeedController> {
                 SliverToBoxAdapter(
                   child: Container(
                     margin: const EdgeInsets.only(top: 14),
-                    width: double.infinity,
                     height: 1.2,
-                    color: const Color(0xFFE5E5E5),
+                    color: AppColors.divider,
                   ),
                 ),
                 Obx(() {
-                  if (controller.isLoading.value &&
-                      controller.posts.isEmpty) {
+                  if (controller.isLoading.value && controller.posts.isEmpty) {
                     return const SliverFillRemaining(
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  if (!controller.isLoading.value &&
-                      controller.posts.isEmpty) {
+                  if (!controller.isLoading.value && controller.posts.isEmpty) {
                     return SliverFillRemaining(
-                      hasScrollBody: false,
                       child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Text(
-                            controller.error.value ??
-                                'No posts yet — pull to refresh.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            Text(
+                              controller.error.value ?? 'No posts yet',
+                              style: const TextStyle(color: Colors.grey),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     );
                   }
                   return SliverList(
                     delegate: SliverChildBuilderDelegate(
-                      (ctx, i) {
-                        if (i == controller.posts.length) {
-                          if (!controller.hasMore.value) {
-                            return const SizedBox(height: 24);
-                          }
-                          return const Padding(
-                            padding: EdgeInsets.all(16),
-                            child:
-                                Center(child: CircularProgressIndicator()),
-                          );
+                      (context, index) {
+                        if (index == controller.posts.length) {
+                          return controller.hasMore.value
+                              ? const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Center(child: CircularProgressIndicator()),
+                                )
+                              : const SizedBox(height: 80);
                         }
-                        return PostCard(post: controller.posts[i]);
+                        return PostCard(post: controller.posts[index]);
                       },
                       childCount: controller.posts.length + 1,
                     ),

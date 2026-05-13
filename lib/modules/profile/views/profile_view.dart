@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../controllers/profile_controller.dart';
@@ -12,305 +13,320 @@ class ProfileView extends GetView<ProfileController> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.add, color: Colors.black),
-          onPressed: () {},
-        ),
-        title: Row(
+        surfaceTintColor: Colors.transparent,
+        title: Obx(() => Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Text(
-              'Socialappofficial',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
+              controller.username.value,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 22),
             ),
-            SizedBox(width: 4),
-            Icon(Icons.keyboard_arrow_down, color: Colors.black),
+            const Icon(Icons.keyboard_arrow_down, size: 20),
           ],
-        ),
-        centerTitle: true,
+        )),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.black),
-            onPressed: () {},
-          ),
+          IconButton(icon: const Icon(Icons.add_box_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return DefaultTabController(
+          length: 3,
+          child: NestedScrollView(
+            physics: const BouncingScrollPhysics(),
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 44,
-                        backgroundColor: Colors.grey[300],
-                        child: Icon(Icons.person, color: Colors.grey[700], size: 44),
-                      ),
-                      Positioned(
-                        bottom: 4,
-                        right: 4,
-                        child: Container(
-                          width: 22,
-                          height: 22,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1877F2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, size: 16, color: Colors.white),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 24, 10),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Obx(() => CircleAvatar(
+                                radius: 42,
+                                backgroundColor: Colors.grey[100],
+                                backgroundImage: controller.profilePic.value.isNotEmpty
+                                    ? NetworkImage(controller.profilePic.value) as ImageProvider
+                                    : null,
+                                child: controller.profilePic.value.isEmpty
+                                    ? Text(controller.username.value.isNotEmpty
+                                        ? controller.username.value[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold))
+                                    : null,
+                              )),
+                            ),
+                            Expanded(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Obx(() => _StatItem(label: 'Posts',     value: '${controller.postsCount.value}')),
+                                  Obx(() => _StatItem(label: 'Followers', value: '${controller.followersCount.value}')),
+                                  Obx(() => _StatItem(label: 'Following', value: '${controller.followingCount.value}')),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Obx(() => Text(controller.name.value,
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14))),
+                            const Text('Digital Creator',
+                                style: TextStyle(color: Colors.grey, fontSize: 14)),
+                            const SizedBox(height: 2),
+                            Obx(() => Text(controller.bio.value,
+                                style: const TextStyle(fontSize: 14))),
+                            const SizedBox(height: 4),
+                            Obx(() {
+                              final url = controller.website.value.trim();
+                              if (url.isEmpty) {
+                                return Row(
+                                  children: const [
+                                    Icon(Icons.link, size: 14, color: Colors.grey),
+                                    SizedBox(width: 4),
+                                    Text('Available',
+                                        style: TextStyle(color: Colors.grey, fontSize: 14)),
+                                  ],
+                                );
+                              }
+                              return GestureDetector(
+                                onTap: () async {
+                                  final raw = url.startsWith('http') ? url : 'https://$url';
+                                  final uri = Uri.tryParse(raw);
+                                  if (uri != null) {
+                                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  }
+                                },
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.link, size: 14, color: Color(0xFF00376B)),
+                                    const SizedBox(width: 4),
+                                    Flexible(
+                                      child: Text(url,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                              color: Color(0xFF00376B),
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _ProfileButton(
+                                label: 'Edit Profile',
+                                onPressed: () => Get.toNamed(AppRoutes.EDIT_PROFILE),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: _ProfileButton(label: 'Share Profile', onPressed: () {}),
+                            ),
+                            const SizedBox(width: 8),
+                            _ProfileIconButton(icon: Icons.person_add_outlined, onPressed: () {}),
+                          ],
+                        ),
+                      ),
+
+                      const _HighlightsSection(),
+                      const SizedBox(height: 10),
                     ],
                   ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: const [
-                        _Stat(label: 'Posts', value: '126'),
-                        _Stat(label: 'Followers', value: '417'),
-                        _Stat(label: 'Following', value: '472'),
+                ),
+
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _SliverTabBarDelegate(
+                    const TabBar(
+                      indicatorColor: Colors.black,
+                      indicatorWeight: 1,
+                      labelColor: Colors.black,
+                      unselectedLabelColor: Colors.grey,
+                      tabs: [
+                        Tab(icon: Icon(Icons.grid_on)),
+                        Tab(icon: Icon(Icons.video_collection_outlined)),
+                        Tab(icon: Icon(Icons.person_pin_outlined)),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Userspots',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Designer',
-                    style: TextStyle(color: Colors.black54, fontSize: 13),
-                  ),
-                  SizedBox(height: 2),
-                  Text(
-                    'Senior Product Designer @hepsiburada',
-                    style: TextStyle(color: Colors.black54, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: SizedBox(
-                height: 42,
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFE0E0E0)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Edit Profile',
-                    style: TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
                 ),
-              ),
+              ];
+            },
+            body: TabBarView(
+              children: [
+                _buildPhotoGrid(),
+                const Center(child: Text('No Reels yet')),
+                const Center(child: Text('Photos and videos of you')),
+              ],
             ),
-            const SizedBox(height: 14),
-            const _HighlightsRow(),
-            const SizedBox(height: 12),
-            const _ProfileTabs(),
-            const SizedBox(height: 1),
-            const Divider(height: 1),
-            const _PhotoGrid(),
-          ],
-        ),
-      ),
-      bottomNavigationBar: const _BottomNav(current: _NavTab.profile),
-    );
-  }
-}
-
-enum _NavTab { feed, shorts, direct, profile }
-
-class _BottomNav extends StatelessWidget {
-  final _NavTab current;
-  const _BottomNav({required this.current});
-
-  @override
-  Widget build(BuildContext context) {
-    Color iconColor(_NavTab tab) =>
-        tab == current ? Colors.black : Colors.black54;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE0E0E0), width: 0.5)),
-      ),
-      child: SafeArea(
-        child: SizedBox(
-          height: 56,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              IconButton(
-                icon: Icon(Icons.home_filled, color: iconColor(_NavTab.feed)),
-                onPressed: () => Get.offAllNamed(AppRoutes.FEED),
-              ),
-              IconButton(
-                icon: Icon(Icons.video_collection_outlined,
-                    color: iconColor(_NavTab.shorts)),
-                onPressed: () => Get.offAllNamed(AppRoutes.SHORTS),
-              ),
-              IconButton(
-                icon: Icon(Icons.send_outlined, color: iconColor(_NavTab.direct)),
-                onPressed: () => Get.offAllNamed(AppRoutes.DIRECT),
-              ),
-              IconButton(
-                icon:
-                    Icon(Icons.person_outline, color: iconColor(_NavTab.profile)),
-                onPressed: () => Get.offAllNamed(AppRoutes.PROFILE),
-              ),
-            ],
           ),
-        ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildPhotoGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 1,
+        mainAxisSpacing: 1,
       ),
+      itemCount: 9,
+      itemBuilder: (context, index) {
+        return Image.network(
+          'https://picsum.photos/id/${index + 10}/300/300',
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+        );
+      },
     );
   }
 }
 
-class _Stat extends StatelessWidget {
+class _StatItem extends StatelessWidget {
   final String label;
   final String value;
-  const _Stat({required this.label, required this.value});
+  const _StatItem({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 16,
-            color: Colors.black87,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        Text(label, style: const TextStyle(fontSize: 14, color: Colors.black)),
       ],
     );
   }
 }
 
-class _HighlightsRow extends StatelessWidget {
-  const _HighlightsRow();
+class _ProfileButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+  const _ProfileButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    final items = const ['Goggles', 'Graffiti', 'Clock', 'Foods', 'Paints'];
     return SizedBox(
-      height: 92,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: items.length,
-        separatorBuilder: (context, index) => const SizedBox(width: 12),
-        itemBuilder: (context, i) {
-          return Column(
-            children: [
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE0E0E0)),
-                ),
-                child: Icon(Icons.image_outlined, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 6),
-              SizedBox(
-                width: 70,
-                child: Text(
-                  items[i],
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 11, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          );
-        },
+      height: 32,
+      child: TextButton(
+        onPressed: onPressed,
+        style: TextButton.styleFrom(
+          backgroundColor: Colors.grey[100],
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          padding: EdgeInsets.zero,
+        ),
+        child: Text(label,
+            style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 14)),
       ),
     );
   }
 }
 
-class _ProfileTabs extends StatelessWidget {
-  const _ProfileTabs();
+class _ProfileIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  const _ProfileIconButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32, height: 32,
+      decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(8)),
+      child: IconButton(
+        icon: Icon(icon, size: 18, color: Colors.black),
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+      ),
+    );
+  }
+}
+
+class _HighlightsSection extends StatelessWidget {
+  const _HighlightsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: 1,
+        itemBuilder: (_, __) => const _HighlightItem(label: 'New', isAdd: true),
+      ),
+    );
+  }
+}
+
+class _HighlightItem extends StatelessWidget {
+  final String label;
+  final bool isAdd;
+  const _HighlightItem({required this.label, this.isAdd = false});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: const [
-          Icon(Icons.grid_on, color: Colors.black87),
-          Icon(Icons.video_collection_outlined, color: Colors.black38),
-          Icon(Icons.repeat, color: Colors.black38),
-          Icon(Icons.bookmark_border, color: Colors.black38),
+      padding: const EdgeInsets.only(right: 18),
+      child: Column(
+        children: [
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey[200]!)),
+            child: isAdd
+                ? const Icon(Icons.add, size: 30)
+                : CircleAvatar(backgroundColor: Colors.grey[100],
+                    child: const Icon(Icons.image_outlined, color: Colors.grey)),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 12)),
         ],
       ),
     );
   }
 }
 
-class _PhotoGrid extends StatelessWidget {
-  const _PhotoGrid();
+class _SliverTabBarDelegate extends SliverPersistentHeaderDelegate {
+  _SliverTabBarDelegate(this._tabBar);
+  final TabBar _tabBar;
 
   @override
-  Widget build(BuildContext context) {
-    final tiles = List<int>.generate(24, (i) => i);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: tiles.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          mainAxisSpacing: 2,
-          crossAxisSpacing: 2,
-        ),
-        itemBuilder: (_, i) {
-          final shade = 120 + (i % 6) * 15;
-          return Container(
-            color: Color.fromARGB(255, shade, shade, shade),
-            child: const Center(
-              child: Icon(Icons.image, color: Colors.white30),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
+  double get minExtent => _tabBar.preferredSize.height;
+  @override
+  double get maxExtent => _tabBar.preferredSize.height;
 
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(color: Colors.white, child: _tabBar);
+  }
+
+  @override
+  bool shouldRebuild(_SliverTabBarDelegate oldDelegate) => false;
+}

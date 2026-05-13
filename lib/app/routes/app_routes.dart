@@ -13,30 +13,32 @@ abstract class AppRoutes {
   static const ONBOARDING_HOBBY   = '/onboarding/hobby';
   static const ONBOARDING_FRIENDS = '/onboarding/friends';
 
-  // Main
-  static const FEED            = '/feed';
-  static const SEARCH          = '/search';
-  static const SHORTS          = '/shorts';
-  static const SHOP            = '/shop';
-
-  // Profile
-  static const PROFILE         = '/profile';
-  static const EDIT_PROFILE    = '/edit-profile';
+  // Main shell (replaces the old per-tab routes)
+  static const MAIN  = '/main';
+  static const FEED  = '/main'; // kept as alias for auth middleware redirects
 
   // Post
-  static const POST_DETAIL     = '/post/:id';
-  static const CREATE_POST     = '/create-post';
+  static const POST_DETAIL  = '/post/:id';
+  static const CREATE_POST  = '/create-post';
+
+  // Profile
+  static const PROFILE      = '/profile';
+  static const EDIT_PROFILE = '/edit-profile';
+  static const OTHER_PROFILE = '/other-profile';
 
   // Story
-  static const STORY           = '/story';
+  static const STORY        = '/story';
+  static const STORY_VIEWER = '/story-viewer';
 
-  // Direct
-  static const DIRECT          = '/direct';
-  static const CHAT            = '/direct/chat';
+  // Direct / Chat
+  static const DIRECT       = '/direct';
+  static const CHAT         = '/direct/chat';
 
-  // Notifications
-  static const NOTIFICATIONS   = '/notifications';
+  // Search & Shorts (accessed through MainNavigationScreen tabs)
+  static const SEARCH  = '/search';
+  static const SHORTS  = '/shorts';
 
-  // Settings
-  static const SETTINGS        = '/settings';
+  // Notifications / Settings
+  static const NOTIFICATIONS = '/notifications';
+  static const SETTINGS      = '/settings';
 }

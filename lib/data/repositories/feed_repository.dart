@@ -7,6 +7,7 @@ import '../providers/feed_provider.dart';
 
 abstract class FeedRepository {
   Future<ApiResponse<List<PostModel>>> getFeed(int page);
+  Future<ApiResponse<PostModel>>       getPostById(String postId);
   Future<ApiResponse<void>>            toggleLike(String postId, {required bool wasLiked});
   Future<ApiResponse<int>>             getLikesCount(String postId);
   Future<ApiResponse<void>>            savePost(String postId);
@@ -15,6 +16,27 @@ abstract class FeedRepository {
 class FeedRepositoryImpl implements FeedRepository {
   final FeedProvider _provider;
   const FeedRepositoryImpl(this._provider);
+
+  @override
+  Future<ApiResponse<PostModel>> getPostById(String postId) async {
+    try {
+      final res = await _provider.getPostById(postId);
+      final body = res.data;
+      Map<String, dynamic>? raw;
+      if (body is Map<String, dynamic>) {
+        final nested = body['data'];
+        raw = nested is Map<String, dynamic> ? nested : body;
+      }
+      if (raw == null) return ApiResponse.failure('Post not found');
+      return ApiResponse.success(PostModel.fromJson(raw));
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to load post'));
+    } catch (e) {
+      return ApiResponse.failure('Post parse error: $e');
+    }
+  }
 
   @override
   //get feed

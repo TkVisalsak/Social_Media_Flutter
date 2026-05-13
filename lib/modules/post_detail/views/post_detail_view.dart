@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../data/models/post_model.dart';
 import '../controllers/post_detail_controller.dart';
 
 class PostDetailView extends GetView<PostDetailController> {
@@ -14,65 +15,85 @@ class PostDetailView extends GetView<PostDetailController> {
     final body = Column(
       children: [
         if (isSheet) const _CommentsSheetHeader(),
+
+        // ── Post content (route mode only) ──────────────
+        if (!isSheet)
+          Obx(() {
+            if (controller.isLoadingPost.value) {
+              return const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final p = controller.post.value;
+            if (p == null) return const SizedBox.shrink();
+            return _PostSummary(post: p);
+          }),
+
+        // ── Comments list ────────────────────────────────
         Expanded(
           child: Obx(() {
-              if (controller.isLoading.value && controller.comments.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (controller.error.value != null &&
-                  controller.comments.isEmpty) {
-                return Center(
-                  child: Text(
-                    controller.error.value!,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                );
-              }
-
-              final all = controller.comments.toList(growable: false);
-              final parents = all.where((c) => c.parentId == null).toList();
-              final repliesByParent = <String, List<dynamic>>{};
-              for (final c in all.where((c) => c.parentId != null)) {
-                repliesByParent.putIfAbsent(c.parentId!, () => []).add(c);
-              }
-
-              return RefreshIndicator(
-                onRefresh: controller.fetchComments,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: parents.length,
-                  itemBuilder: (_, i) {
-                    final p = parents[i];
-                    final replies =
-                        (repliesByParent[p.id] ?? const []).cast();
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _CommentTile(
-                          username: p.user.username ?? p.user.fullName ?? 'User',
-                          text: p.text,
-                          onReply: () => controller.startReply(p),
-                          onDelete: () => controller.deleteComment(p),
-                        ),
-                        for (final r in replies)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 34),
-                            child: _CommentTile(
-                              username:
-                                  r.user.username ?? r.user.name ?? 'User',
-                              text: r.text,
-                              isReply: true,
-                              onReply: () => controller.startReply(p),
-                              onDelete: () => controller.deleteComment(r),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
+            if (controller.isLoading.value && controller.comments.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (controller.error.value != null && controller.comments.isEmpty) {
+              return Center(
+                child: Text(controller.error.value!,
+                    style: const TextStyle(color: Colors.grey)),
               );
-            }),
+            }
+
+            final all     = controller.comments.toList(growable: false);
+            final parents = all.where((c) => c.parentId == null).toList();
+            final repliesByParent = <String, List<dynamic>>{};
+            for (final c in all.where((c) => c.parentId != null)) {
+              repliesByParent.putIfAbsent(c.parentId!, () => []).add(c);
+            }
+
+            if (parents.isEmpty) {
+              return const Center(
+                child: Text('No comments yet.',
+                    style: TextStyle(color: Colors.grey, fontSize: 15)),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: controller.fetchComments,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: parents.length,
+                itemBuilder: (_, i) {
+                  final p = parents[i];
+                  final replies = (repliesByParent[p.id] ?? const []).cast();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CommentTile(
+                        username: p.user.username ?? p.user.fullName ?? 'User',
+                        text: p.text,
+                        onReply: () => controller.startReply(p),
+                        onDelete: () => controller.deleteComment(p),
+                      ),
+                      for (final r in replies)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 34),
+                          child: _CommentTile(
+                            username: r.user.username ?? r.user.fullName ?? 'User',
+                            text: r.text,
+                            isReply: true,
+                            onReply: () => controller.startReply(p),
+                            onDelete: () => controller.deleteComment(r),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            );
+          }),
         ),
+
+        // ── Reply banner ─────────────────────────────────
         Obx(() {
           final replying = controller.replyTo.value;
           if (replying == null) return const SizedBox.shrink();
@@ -87,22 +108,19 @@ class PostDetailView extends GetView<PostDetailController> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(
-                    'Replying to $name',
-                    style: const TextStyle(
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: Text('Replying to $name',
+                      style: const TextStyle(
+                          color: Colors.black87, fontWeight: FontWeight.w600)),
                 ),
                 TextButton(
-                  onPressed: controller.cancelReply,
-                  child: const Text('Cancel'),
-                ),
+                    onPressed: controller.cancelReply,
+                    child: const Text('Cancel')),
               ],
             ),
           );
         }),
+
+        // ── Comment input ────────────────────────────────
         SafeArea(
           top: false,
           child: Padding(
@@ -139,25 +157,147 @@ class PostDetailView extends GetView<PostDetailController> {
       ],
     );
 
-    if (isSheet) {
-      return Material(color: Colors.white, child: body);
-    }
+    if (isSheet) return Material(color: Colors.white, child: body);
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Post',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        ),
+        title: const Text('Post',
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600)),
         iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: body,
     );
   }
 }
+
+// ─── Post summary shown at the top of the detail route ───────────────────────
+
+class _PostSummary extends StatelessWidget {
+  final PostModel post;
+  const _PostSummary({required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    final username   = post.user.username ?? post.user.fullName ?? 'user';
+    final profilePic = post.user.profilePic;
+    final images     = post.imageUrls;
+    final caption    = post.caption ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.grey[200],
+                backgroundImage: profilePic != null ? NetworkImage(profilePic) : null,
+                child: profilePic == null
+                    ? Text(username.isNotEmpty ? username[0].toUpperCase() : '?',
+                        style: const TextStyle(fontWeight: FontWeight.bold))
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Text(username,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+        ),
+
+        // Images
+        if (images.isNotEmpty)
+          _ImageSlider(images: images),
+
+        // Caption
+        if (caption.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(color: Colors.black, fontSize: 14),
+                children: [
+                  TextSpan(text: '$username ',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(text: caption),
+                ],
+              ),
+            ),
+          ),
+
+        const Divider(height: 24),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(12, 0, 12, 4),
+          child: Text('Comments',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageSlider extends StatefulWidget {
+  final List<String> images;
+  const _ImageSlider({required this.images});
+
+  @override
+  State<_ImageSlider> createState() => _ImageSliderState();
+}
+
+class _ImageSliderState extends State<_ImageSlider> {
+  int _page = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.bottomCenter,
+      children: [
+        SizedBox(
+          height: 300,
+          child: PageView.builder(
+            itemCount: widget.images.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (_, i) => Image.network(
+              widget.images[i],
+              fit: BoxFit.cover,
+              width: double.infinity,
+              errorBuilder: (_, _, _) =>
+                  const Center(child: Icon(Icons.broken_image, size: 60, color: Colors.grey)),
+            ),
+          ),
+        ),
+        if (widget.images.length > 1)
+          Positioned(
+            bottom: 10,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(widget.images.length, (i) {
+                final active = i == _page;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: active ? 18 : 5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: active ? Colors.white : Colors.white54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                );
+              }),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─── Comments sheet header ────────────────────────────────────────────────────
 
 class _CommentsSheetHeader extends StatelessWidget {
   const _CommentsSheetHeader();
@@ -169,12 +309,10 @@ class _CommentsSheetHeader extends StatelessWidget {
         const SizedBox(height: 8),
         Center(
           child: Container(
-            width: 40,
-            height: 4,
+            width: 40, height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(2),
-            ),
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2)),
           ),
         ),
         const SizedBox(height: 8),
@@ -184,15 +322,12 @@ class _CommentsSheetHeader extends StatelessWidget {
             children: [
               const SizedBox(width: 40),
               const Expanded(
-                child: Text(
-                  'Comments',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
-                ),
+                child: Text('Comments',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black)),
               ),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.black87),
@@ -205,6 +340,8 @@ class _CommentsSheetHeader extends StatelessWidget {
     );
   }
 }
+
+// ─── Comment tile ─────────────────────────────────────────────────────────────
 
 class _CommentTile extends StatelessWidget {
   final String username;
@@ -253,10 +390,9 @@ class _CommentTile extends StatelessWidget {
                     text: TextSpan(
                       style: const TextStyle(color: Colors.black87),
                       children: [
-                        TextSpan(
-                          text: username,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                        TextSpan(text: username,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700)),
                         TextSpan(text: '  $text'),
                       ],
                     ),
@@ -293,4 +429,3 @@ class _CommentTile extends StatelessWidget {
     );
   }
 }
-

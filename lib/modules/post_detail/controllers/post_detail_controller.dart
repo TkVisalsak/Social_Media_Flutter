@@ -3,46 +3,45 @@ import 'package:get/get.dart';
 
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/post_model.dart';
-import '../../../data/models/user_model.dart';
 import '../../../data/repositories/comments_repository.dart';
+import '../../../data/repositories/feed_repository.dart';
 import '../../feed/controllers/feed_controller.dart';
 
 class PostDetailController extends GetxController {
-  final CommentsRepository _commentsRepo;
-  final PostModel? _initialPost;
-
-  PostDetailController(this._commentsRepo, {PostModel? initialPost})
+  PostDetailController(this._commentsRepo, this._feedRepo, {PostModel? initialPost})
       : _initialPost = initialPost;
 
-  late final PostModel post;
+  final CommentsRepository _commentsRepo;
+  final FeedRepository     _feedRepo;
+  final PostModel?         _initialPost;
 
-  final isLoading = false.obs;
-  final error = RxnString();
+  final post          = Rxn<PostModel>();
+  final isLoadingPost = false.obs;
+  final isLoading     = false.obs;
+  final error         = RxnString();
 
-  final comments = <CommentModel>[].obs;
-  final replyTo = Rxn<CommentModel>();
-
+  final comments        = <CommentModel>[].obs;
+  final replyTo         = Rxn<CommentModel>();
   final inputController = TextEditingController();
 
   @override
   void onInit() {
     super.onInit();
     if (_initialPost != null) {
-      post = _initialPost;
-    } else {
-      final arg = Get.arguments;
-      if (arg is PostModel) {
-        post = arg;
-      } else {
-        // Minimal fallback; prefer passing a full PostModel as arguments.
-        post = PostModel(
-          id: (arg ?? '').toString(),
-          user: const UserModel(id: '', email: ''),
-          createdAt: DateTime.now(),
-        );
-      }
+      post.value = _initialPost;
+      fetchComments();
+      return;
     }
-    fetchComments();
+
+    final arg = Get.arguments;
+    if (arg is PostModel) {
+      post.value = arg;
+      fetchComments();
+    } else {
+      // String postId — came from deep link or route param
+      final postId = (arg ?? Get.parameters['id'] ?? '').toString();
+      _fetchPostById(postId);
+    }
   }
 
   @override
@@ -51,10 +50,25 @@ class PostDetailController extends GetxController {
     super.onClose();
   }
 
+  Future<void> _fetchPostById(String id) async {
+    if (id.isEmpty) { error('No post ID'); return; }
+    isLoadingPost(true);
+    final res = await _feedRepo.getPostById(id);
+    isLoadingPost(false);
+    if (res.success && res.data != null) {
+      post.value = res.data;
+      fetchComments();
+    } else {
+      error(res.error ?? 'Post not found');
+    }
+  }
+
   Future<void> fetchComments() async {
+    final p = post.value;
+    if (p == null) return;
     isLoading(true);
     error(null);
-    final res = await _commentsRepo.getComments(post.id);
+    final res = await _commentsRepo.getComments(p.id);
     if (res.success) {
       comments.assignAll(res.data ?? const []);
     } else {
@@ -63,30 +77,25 @@ class PostDetailController extends GetxController {
     isLoading(false);
   }
 
-  void startReply(CommentModel c) {
-    replyTo(c);
-  }
-
-  void cancelReply() {
-    replyTo(null);
-  }
+  void startReply(CommentModel c) => replyTo(c);
+  void cancelReply()              => replyTo(null);
 
   Future<void> send() async {
+    final p = post.value;
+    if (p == null) return;
     final text = inputController.text.trim();
     if (text.isEmpty) return;
 
     final parent = replyTo.value?.id;
-    final res = await _commentsRepo.addComment(post.id, text: text, parentId: parent);
+    final res = await _commentsRepo.addComment(p.id, text: text, parentId: parent);
     if (res.success) {
       inputController.clear();
       replyTo(null);
-      // Refresh so threading/order matches server
       await fetchComments();
 
-      // Optimistically bump feed comment count if this post exists there
       if (Get.isRegistered<FeedController>()) {
         final feed = Get.find<FeedController>();
-        final idx = feed.posts.indexWhere((p) => p.id == post.id);
+        final idx = feed.posts.indexWhere((x) => x.id == p.id);
         if (idx >= 0) {
           final old = feed.posts[idx];
           feed.posts[idx] = old.copyWith(commentsCount: old.commentsCount + 1);
@@ -109,10 +118,4 @@ class PostDetailController extends GetxController {
           snackPosition: SnackPosition.BOTTOM);
     }
   }
-
-  Future<void> toggleLike() async {
-    if (!Get.isRegistered<FeedController>()) return;
-    await Get.find<FeedController>().toggleLike(post.id);
-  }
 }
-

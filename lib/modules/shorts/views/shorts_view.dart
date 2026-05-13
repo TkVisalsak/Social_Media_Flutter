@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../../core/widgets/app_bottom_navbar.dart';
 import '../controllers/shorts_controller.dart';
 import '../widgets/reel_item.dart';
 
@@ -10,58 +10,118 @@ class ShortsView extends GetView<ShortsController> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.dark,
+    ));
+
     return Scaffold(
       backgroundColor: Colors.black,
-      bottomNavigationBar: const AppBottomNavBar(
-        current: AppNavTab.reels,
-        dark: true,
-      ),
       body: Obx(() {
         if (controller.isLoading.value && controller.shorts.isEmpty) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.white),
-          );
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
-
         if (controller.shorts.isEmpty) {
           return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                controller.error.value ?? 'No reels yet.',
-                style: const TextStyle(color: Colors.white70),
-                textAlign: TextAlign.center,
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.video_library_outlined, size: 64, color: Colors.white38),
+                const SizedBox(height: 16),
+                Text(controller.error.value ?? 'No reels yet',
+                    style: const TextStyle(color: Colors.white54)),
+              ],
             ),
           );
         }
 
-        return _ReelsPager(shorts: controller.shorts.toList());
+        return Stack(
+          children: [
+            _ReelPageView(controller: controller),
+            _TopBar(),
+          ],
+        );
       }),
     );
   }
 }
 
-class _ReelsPager extends StatefulWidget {
-  final List shorts;
-  const _ReelsPager({required this.shorts});
+class _ReelPageView extends StatefulWidget {
+  final ShortsController controller;
+  const _ReelPageView({required this.controller});
 
   @override
-  State<_ReelsPager> createState() => _ReelsPagerState();
+  State<_ReelPageView> createState() => _ReelPageViewState();
 }
 
-class _ReelsPagerState extends State<_ReelsPager> {
-  int _index = 0;
+class _ReelPageViewState extends State<_ReelPageView> {
+  int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    return PageView.builder(
+    return Obx(() => PageView.builder(
       scrollDirection: Axis.vertical,
-      itemCount: widget.shorts.length,
-      onPageChanged: (i) => setState(() => _index = i),
+      itemCount: widget.controller.shorts.length,
+      onPageChanged: (i) => setState(() => _currentIndex = i),
       itemBuilder: (_, i) => ReelItem(
-        short: widget.shorts[i],
-        active: i == _index,
+        key: ValueKey(widget.controller.shorts[i].id),
+        short: widget.controller.shorts[i],
+        isActive: i == _currentIndex,
+      ),
+    ));
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.add_box_outlined, color: Colors.white, size: 28),
+            const Spacer(),
+            _TabBtn(label: 'For You',  selected: true,  onTap: () {}),
+            const SizedBox(width: 20),
+            _TabBtn(label: 'Friends',  selected: false, onTap: () {}),
+            const Spacer(),
+            const Icon(Icons.search_rounded, color: Colors.white, size: 26),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TabBtn extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _TabBtn({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              )),
+          const SizedBox(height: 4),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: selected ? 24 : 0,
+            height: 2,
+            color: Colors.white,
+          ),
+        ],
       ),
     );
   }

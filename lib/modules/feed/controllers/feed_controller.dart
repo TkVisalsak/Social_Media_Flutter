@@ -125,6 +125,7 @@ class FeedController extends GetxController {
     Get.put(
       PostDetailController(
         Get.find<CommentsRepository>(),
+        Get.find<FeedRepository>(),
         initialPost: post,
       ),
     );

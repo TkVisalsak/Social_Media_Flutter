@@ -19,7 +19,7 @@ class AppBottomNavBar extends StatelessWidget {
     if (tab == current) return;
     switch (tab) {
       case AppNavTab.home:
-        Get.offAllNamed(AppRoutes.FEED);
+        Get.offAllNamed(AppRoutes.MAIN);
       case AppNavTab.reels:
         Get.offAllNamed(AppRoutes.SHORTS);
       case AppNavTab.search:

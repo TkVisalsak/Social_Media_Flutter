@@ -1,103 +1,48 @@
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/story_avatar.dart';
+import '../../story/models/story_viewer_user.dart';
+import '../../story/screens/create_story_screen.dart';
+import '../../story/views/story_viewer_screen.dart';
+
 class StoryItem extends StatelessWidget {
-  final String username;
+  final String  username;
   final String? imageUrl;
-  final bool hasStory;
-  final bool isCurrentUser;
-  final VoidCallback? onTap;
+  final bool    isNetworkImage;
+  final bool    hasStory;
+  final bool    isViewed;
+  final bool    isCurrentUser;
+  final List<StoryViewerUser> allUsers;
+  final int     userIndex;
 
   const StoryItem({
     super.key,
     required this.username,
     this.imageUrl,
-    this.hasStory = false,
-    this.isCurrentUser = false,
-    this.onTap,
+    this.isNetworkImage = true,
+    this.hasStory       = false,
+    this.isCurrentUser  = false,
+    this.isViewed       = false,
+    this.allUsers       = const [],
+    this.userIndex      = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final firstLetter =
-        username.isNotEmpty ? username[0].toUpperCase() : '?';
-    final hasImage = imageUrl != null && imageUrl!.trim().isNotEmpty;
-
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _handleTap(context),
       child: Padding(
         padding: const EdgeInsets.only(right: 12),
         child: Column(
           children: [
-            Stack(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: hasStory
-                        ? const LinearGradient(
-                            colors: [
-                              Color(0xFFFF5F6D),
-                              Color(0xFFFF9966),
-                              Color(0xFFFFC371),
-                            ],
-                          )
-                        : null,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: const Color(0xFFD8B4A0),
-                      backgroundImage:
-                          hasImage ? NetworkImage(imageUrl!) : null,
-                      child: hasImage
-                          ? null
-                          : Text(
-                              firstLetter,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.w300,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-                if (isCurrentUser && !hasStory)
-                  Positioned(
-                    bottom: 2,
-                    right: 2,
-                    child: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ),
-                  ),
-              ],
+            StoryAvatar(
+              imagePath:      imageUrl,
+              isNetworkImage: isNetworkImage,
+              username:       username,
+              radius:         30,
+              hasRing:        hasStory,
+              isViewed:       isViewed,
+              showAddBadge:   isCurrentUser && !hasStory,
             ),
             const SizedBox(height: 8),
             SizedBox(
@@ -106,11 +51,55 @@ class StoryItem extends StatelessWidget {
                 isCurrentUser ? 'Your story' : username,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleTap(BuildContext context) {
+    if (isCurrentUser) {
+      if (hasStory && allUsers.isNotEmpty) {
+        _openViewer(context);
+      } else {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateStoryScreen()));
+      }
+    } else {
+      _openViewer(context);
+    }
+  }
+
+  void _openViewer(BuildContext context) {
+    if (allUsers.isEmpty) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => StoryViewerScreen(
+        users: allUsers,
+        initialUserIndex: userIndex.clamp(0, allUsers.length - 1),
+      ),
+    ));
+  }
+}
+
+class CurrentUserStoryItem extends StatelessWidget {
+  const CurrentUserStoryItem({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateStoryScreen())),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Column(
+          children: [
+            const StoryAvatar(username: 'You', radius: 30, showAddBadge: true),
+            const SizedBox(height: 8),
+            const SizedBox(
+              width: 72,
+              child: Text('Your story', textAlign: TextAlign.center, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
             ),
           ],
         ),

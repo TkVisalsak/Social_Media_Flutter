@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/widgets/app_bottom_navbar.dart';
+import '../../../app/routes/app_routes.dart';
 import '../../../data/models/message_model.dart';
 import '../controllers/message_controller.dart';
+import '../screens/new_message_screen.dart';
+import '../widgets/chat_message_tile.dart';
+import '../widgets/chat_search_bar.dart';
 
 class DirectView extends GetView<DirectController> {
   const DirectView({super.key});
@@ -11,251 +14,129 @@ class DirectView extends GetView<DirectController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Get.back(),
-        ),
-        title: const Text(
-          'Messages',
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w700,
-            fontSize: 16,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
-      ),
-      bottomNavigationBar: const AppBottomNavBar(current: AppNavTab.chat),
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            const _SearchBar(),
-            const SizedBox(height: 8),
-            const _MessagesHeader(),
-            Expanded(
-              child: Obx(() {
-                if (controller.isLoading.value &&
-                    controller.conversations.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (controller.conversations.isEmpty) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(
-                        controller.error.value ??
-                            'No conversations yet.\nFollow people to start chatting.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                    ),
-                  );
-                }
-                return RefreshIndicator(
-                  onRefresh: () =>
-                      controller.fetchConversations(refresh: true),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    itemCount: controller.conversations.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 2),
-                    itemBuilder: (_, i) {
-                      final c = controller.conversations[i];
-                      return _ConversationTile(
-                        conversation: c,
-                        name: controller.displayName(c),
-                        avatar: controller.displayAvatar(c),
-                        preview: controller.previewText(c),
-                        time: controller.previewTime(c),
-                        isGroup: c.isGroup,
-                      );
-                    },
-                  ),
-                );
-              }),
-            ),
-          ],
-        ),
+        child: _ChatScreenBody(controller: controller),
       ),
     );
   }
 }
 
-class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+class _ChatScreenBody extends StatefulWidget {
+  final DirectController controller;
+  const _ChatScreenBody({required this.controller});
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFFECECEC),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.search, color: Colors.black45),
-            SizedBox(width: 10),
-            Text(
-              'Search',
-              style: TextStyle(color: Colors.black45, fontSize: 14),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<_ChatScreenBody> createState() => _ChatScreenBodyState();
 }
 
-class _MessagesHeader extends StatelessWidget {
-  const _MessagesHeader();
+class _ChatScreenBodyState extends State<_ChatScreenBody> {
+  final _searchController = TextEditingController();
+  final _searchFocus      = FocusNode();
+  bool   _searchActive    = false;
+  String _query           = '';
 
   @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(12, 6, 12, 6),
-      child: Row(
-        children: [
-          Text(
-            'Message',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
+  void dispose() {
+    _searchController.dispose();
+    _searchFocus.dispose();
+    super.dispose();
   }
-}
 
-class _ConversationTile extends StatelessWidget {
-  final ConversationModel conversation;
-  final String name;
-  final String? avatar;
-  final String preview;
-  final String time;
-  final bool isGroup;
-
-  const _ConversationTile({
-    required this.conversation,
-    required this.name,
-    required this.avatar,
-    required this.preview,
-    required this.time,
-    required this.isGroup,
-  });
+  List<ConversationModel> _filtered(List<ConversationModel> all) {
+    if (_query.isEmpty) return all;
+    final q = _query.toLowerCase();
+    return all.where((c) {
+      final name = widget.controller.displayName(c).toLowerCase();
+      return name.contains(q);
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final hasAvatar = avatar != null && avatar!.trim().isNotEmpty;
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-
-    return Material(
-      color: Colors.white,
-      child: InkWell(
-        onTap: () {
-          Get.snackbar(
-            'Chat',
-            'Open chat with $name',
-            snackPosition: SnackPosition.BOTTOM,
-          );
-        },
-        child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // App bar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: Colors.grey.shade300,
-                backgroundImage: hasAvatar ? NetworkImage(avatar!) : null,
-                child: hasAvatar
-                    ? null
-                    : Text(
-                        initial,
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
+              Obx(() {
+                final me = widget.controller.myUserId.value;
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.grey[300],
+                  child: me != null
+                      ? null
+                      : const Icon(Icons.person, color: Colors.grey),
+                );
+              }),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (isGroup)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 4),
-                            child: Icon(
-                              Icons.group,
-                              size: 14,
-                              color: Colors.black38,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            preview,
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 12,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '· $time',
-                          style: const TextStyle(
-                            color: Colors.black38,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              const Expanded(
+                child: Text('Chats',
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: Colors.black, letterSpacing: -0.5)),
               ),
-              const SizedBox(width: 10),
-              const Icon(Icons.photo_camera_outlined, color: Colors.black38),
+              IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.photo_camera_outlined, color: Colors.black, size: 26),
+                splashRadius: 22,
+              ),
+              IconButton(
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const NewMessageScreen())),
+                icon: const Icon(Icons.edit_square, color: Colors.black, size: 24),
+                splashRadius: 22,
+              ),
             ],
           ),
         ),
-      ),
+
+        // Search bar
+        ChatSearchBar(
+          controller: _searchController,
+          focusNode: _searchFocus,
+          isActive: _searchActive,
+          onTap: () => setState(() { _searchActive = true; }),
+          onCancel: () {
+            setState(() { _searchActive = false; _query = ''; });
+            _searchController.clear();
+            _searchFocus.unfocus();
+          },
+        ),
+
+        // Content
+        Expanded(
+          child: Obx(() {
+            if (widget.controller.isLoading.value && widget.controller.conversations.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final list = _filtered(widget.controller.conversations);
+
+            if (list.isEmpty) {
+              return Center(
+                child: Text(
+                  _query.isNotEmpty ? 'No results for "$_query"' : (widget.controller.error.value ?? 'No messages yet'),
+                  style: const TextStyle(color: Colors.grey, fontSize: 15),
+                ),
+              );
+            }
+
+            return ListView.builder(
+              padding: EdgeInsets.zero,
+              itemCount: list.length,
+              itemBuilder: (_, i) => ChatMessageTile(
+                conversation: list[i],
+                controller: widget.controller,
+                onTap: () => Get.toNamed(AppRoutes.CHAT,
+                    arguments: list[i]),
+              ),
+            );
+          }),
+        ),
+      ],
     );
   }
 }

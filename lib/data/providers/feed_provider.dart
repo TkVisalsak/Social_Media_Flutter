@@ -7,6 +7,9 @@ class FeedProvider {
 
   final Dio _dio;
 
+  Future<Response<dynamic>> getPostById(String postId) =>
+      _dio.get('${ApiEndpoints.feeds}/$postId');
+
   Future<Response<dynamic>> getFeed({int page = 1, int limit = 20}) {
     return _dio.get(
       ApiEndpoints.feed,

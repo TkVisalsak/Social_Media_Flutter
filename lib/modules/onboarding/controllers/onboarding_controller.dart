@@ -160,6 +160,6 @@ class OnboardingController extends GetxController {
   }
 
   void finishOnboarding() {
-    Get.offAllNamed(AppRoutes.FEED);
+    Get.offAllNamed(AppRoutes.MAIN);
   }
 }
