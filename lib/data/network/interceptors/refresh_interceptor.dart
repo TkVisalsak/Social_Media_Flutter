@@ -39,8 +39,8 @@ class RefreshInterceptor extends QueuedInterceptorsWrapper {
 
   Future<String> _refreshToken(String refreshToken) async {
     final res = await _dio.post('/auth/refresh', data: {
-      'refresh_token': refreshToken,
+      'refreshToken': refreshToken,
     });
-    return res.data['access_token'];
+    return res.data['accessToken'];
   }
 }
