@@ -12,7 +12,7 @@ class ShortsController extends GetxController {
   final shorts       = <ShortModel>[].obs;
   final isLoading    = false.obs;
   final error        = RxnString();
-  final isTabVisible = true.obs;
+  final isTabVisible = false.obs;
 
   @override
   void onInit() {

@@ -12,6 +12,9 @@ class UserModel {
     this.dob,
     this.gender,
     this.createdAt,
+    this.followersListPublic = true,
+    this.followingListPublic = true,
+    this.savedPostsPublic = false,
   });
 
   final String id;
@@ -24,6 +27,9 @@ class UserModel {
   final String? dob;
   final String? gender;
   final DateTime? createdAt;
+  final bool followersListPublic;
+  final bool followingListPublic;
+  final bool savedPostsPublic;
 
   String? get fullName {
     final f = firstName?.trim() ?? '';
@@ -46,6 +52,15 @@ class UserModel {
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'].toString())
           : null,
+      followersListPublic: json['followersListPublic'] is bool
+          ? json['followersListPublic'] as bool
+          : (json['followersListPublic']?.toString() == 'false' ? false : true),
+      followingListPublic: json['followingListPublic'] is bool
+          ? json['followingListPublic'] as bool
+          : (json['followingListPublic']?.toString() == 'false' ? false : true),
+      savedPostsPublic: json['savedPostsPublic'] is bool
+          ? json['savedPostsPublic'] as bool
+          : (json['savedPostsPublic']?.toString() == 'true' ? true : false),
     );
   }
 
@@ -60,6 +75,9 @@ class UserModel {
         'dob': dob,
         'gender': gender,
         'createdAt': createdAt?.toIso8601String(),
+        'followersListPublic': followersListPublic,
+        'followingListPublic': followingListPublic,
+        'savedPostsPublic': savedPostsPublic,
       };
 
   UserModel copyWith({
@@ -73,6 +91,9 @@ class UserModel {
     String? dob,
     String? gender,
     DateTime? createdAt,
+    bool? followersListPublic,
+    bool? followingListPublic,
+    bool? savedPostsPublic,
   }) =>
       UserModel(
         id: id ?? this.id,
@@ -85,6 +106,9 @@ class UserModel {
         dob: dob ?? this.dob,
         gender: gender ?? this.gender,
         createdAt: createdAt ?? this.createdAt,
+        followersListPublic: followersListPublic ?? this.followersListPublic,
+        followingListPublic: followingListPublic ?? this.followingListPublic,
+        savedPostsPublic: savedPostsPublic ?? this.savedPostsPublic,
       );
 
   @override

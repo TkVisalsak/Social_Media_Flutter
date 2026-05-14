@@ -12,6 +12,7 @@ abstract class FollowRepository {
   Future<ApiResponse<bool>> isFollowing(String userId);
   Future<ApiResponse<List<UserModel>>> getFollowers(String userId);
   Future<ApiResponse<List<UserModel>>> getFollowing(String userId);
+  Future<ApiResponse<List<UserModel>>> getNotFollowingBack();
 }
 
 class FollowRepositoryImpl implements FollowRepository {
@@ -115,6 +116,27 @@ class FollowRepositoryImpl implements FollowRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load following'));
     } catch (e) {
       return ApiResponse.failure('Following parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<UserModel>>> getNotFollowingBack() async {
+    try {
+      final res = await _provider.notFollowingBack();
+      final list = RepoHelpers.extractList(res.data, keys: ['users']);
+      final users = list
+          .map((e) => RepoHelpers.asMap(e))
+          .whereType<Map<String, dynamic>>()
+          .map(UserModel.fromJson)
+          .toList();
+      return ApiResponse.success(users);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load follow-back suggestions'));
+    } catch (e) {
+      return ApiResponse.failure('Not-following-back parse error: $e');
     }
   }
 }

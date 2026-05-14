@@ -26,6 +26,7 @@ abstract class ApiEndpoints {
   static const followers = '/follow/followers';
   static const following = '/follow/following';
   static const followCheck = '/follow/check';
+  static const followNotFollowingBack = '/follow/not-following-back';
 
   // ── Save ──────────────────────────────────────
   static const save = '/save';

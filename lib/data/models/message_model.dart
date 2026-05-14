@@ -63,6 +63,7 @@ class ConversationModel {
     required this.id,
     required this.members,
     this.isGroup = false,
+    this.isMutual = true,
     this.name,
     this.avatar,
     this.admin,
@@ -73,6 +74,7 @@ class ConversationModel {
   final String id;
   final List<UserModel> members;
   final bool isGroup;
+  final bool isMutual;
   final String? name;
   final String? avatar;
   final UserModel? admin;
@@ -98,6 +100,7 @@ class ConversationModel {
     return ConversationModel(
       id: (j['id'] ?? j['_id'] ?? '').toString(),
       isGroup: JsonUtils.toBool(j['isGroup']),
+      isMutual: j['isMutual'] as bool? ?? true,
       name: JsonUtils.nullableString(j['name']),
       avatar: JsonUtils.nullableString(j['avatar']),
       admin: admin,
@@ -114,6 +117,7 @@ class ConversationModel {
   Map<String, dynamic> toJson() => {
         'id': id,
         'isGroup': isGroup,
+        'isMutual': isMutual,
         'name': name,
         'avatar': avatar,
         'admin': admin?.toJson(),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../../../data/models/repost_model.dart';
+import '../../shorts/screens/user_shorts_player.dart';
 import '../controllers/other_profile_controller.dart';
 
 class OtherProfileView extends GetView<OtherProfileController> {
@@ -81,12 +83,16 @@ class OtherProfileView extends GetView<OtherProfileController> {
                                     value: '${controller.postsCount.value}'),
                                 _StatItem(
                                     label: 'Followers',
-                                    value:
-                                        _fmt(controller.followersCount.value)),
+                                    value: _fmt(controller.followersCount.value),
+                                    onTap: () => Get.toNamed(AppRoutes.FOLLOW_LIST,
+                                        arguments: {'userId': controller.user.id, 'type': 'followers'}),
+                                ),
                                 _StatItem(
                                     label: 'Following',
-                                    value:
-                                        _fmt(controller.followingCount.value)),
+                                    value: _fmt(controller.followingCount.value),
+                                    onTap: () => Get.toNamed(AppRoutes.FOLLOW_LIST,
+                                        arguments: {'userId': controller.user.id, 'type': 'following'}),
+                                ),
                               ],
                             )),
                           ),
@@ -273,17 +279,22 @@ class _PostsGrid extends StatelessWidget {
         ),
         itemCount: posts.length,
         itemBuilder: (_, i) {
-          final url = posts[i].firstImageUrl;
+          final post = posts[i];
+          final url = post.firstImageUrl;
           if (url == null || url.isEmpty) {
             return Container(
               color: Colors.grey[200],
               child: const Icon(Icons.image_outlined, color: Colors.grey),
             );
           }
-          return Image.network(url,
+          return GestureDetector(
+            onTap: () => controller.openPostDetail(post),
+            child: Image.network(
+              url,
               fit: BoxFit.cover,
-              errorBuilder: (_, _, _) =>
-                  Container(color: Colors.grey[200]));
+              errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+            ),
+          );
         },
       );
     });
@@ -311,26 +322,39 @@ class _ShortsGrid extends StatelessWidget {
         ),
         itemCount: shorts.length,
         itemBuilder: (_, i) {
-          final thumb = shorts[i].thumbnailUrl;
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              if (thumb != null && thumb.isNotEmpty)
-                Image.network(thumb,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) =>
-                        Container(color: Colors.black))
-              else
-                Container(color: Colors.black),
-              const Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.play_arrow_rounded,
-                      color: Colors.white, size: 20),
+          final short = shorts[i];
+          final thumb = short.thumbnailUrl;
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => UserShortsPlayer(
+                  shorts: controller.shorts.toList(),
+                  initialIndex: i,
                 ),
               ),
-            ],
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (thumb != null && thumb.isNotEmpty)
+                  Image.network(
+                    thumb,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(color: Colors.black),
+                  )
+                else
+                  Container(color: Colors.black),
+                const Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       );
@@ -415,18 +439,22 @@ class _RepostTile extends StatelessWidget {
 class _StatItem extends StatelessWidget {
   final String label;
   final String value;
-  const _StatItem({required this.label, required this.value});
+  final VoidCallback? onTap;
+  const _StatItem({required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        Text(label,
-            style: const TextStyle(fontSize: 14, color: Colors.black)),
-      ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(label,
+              style: const TextStyle(fontSize: 14, color: Colors.black)),
+        ],
+      ),
     );
   }
 }

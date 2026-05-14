@@ -20,8 +20,15 @@ import '../../modules/post_detail/bindings/post_detail_binding.dart';
 import '../../modules/post_detail/views/post_detail_view.dart';
 import '../../modules/profile/bindings/other_profile_binding.dart';
 import '../../modules/profile/bindings/profile_binding.dart';
+import '../../modules/profile/screens/follow_list_screen.dart';
 import '../../modules/profile/views/edit_profile_view.dart';
 import '../../modules/profile/views/other_profile_view.dart';
+import '../../modules/notifications/bindings/notifications_binding.dart';
+import '../../modules/notifications/views/notifications_view.dart';
+import '../../modules/discover/bindings/friend_suggestions_binding.dart';
+import '../../modules/discover/views/friend_suggestions_screen.dart';
+import '../../modules/settings/bindings/settings_binding.dart';
+import '../../modules/settings/views/settings_screen.dart';
 import '../../modules/splash/bindings/splash_binding.dart';
 import '../../modules/splash/views/splash_view.dart';
 import 'app_routes.dart';
@@ -110,6 +117,40 @@ class AppPages {
       name:        AppRoutes.EDIT_PROFILE,
       page:        () => const EditProfileView(),
       binding:     ProfileBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+
+    // ── Notifications ─────────────────────────────────
+    GetPage(
+      name:        AppRoutes.NOTIFICATIONS,
+      page:        () => const NotificationsView(),
+      binding:     NotificationsBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+
+    // ── Settings ──────────────────────────────────────
+    GetPage(
+      name:        AppRoutes.SETTINGS,
+      page:        () => const SettingsScreen(),
+      binding:     SettingsBinding(),
+      middlewares: [AuthMiddleware()],
+    ),
+
+    // ── Follow List ───────────────────────────────────
+    GetPage(
+      name:        AppRoutes.FOLLOW_LIST,
+      page:        () {
+        final args = Get.arguments as Map<String, String>;
+        return FollowListScreen(userId: args['userId']!, type: args['type']!);
+      },
+      middlewares: [AuthMiddleware()],
+    ),
+
+    // ── Friend Suggestions ────────────────────────────
+    GetPage(
+      name:        AppRoutes.FRIEND_SUGGESTIONS,
+      page:        () => const FriendSuggestionsScreen(),
+      binding:     FriendSuggestionsBinding(),
       middlewares: [AuthMiddleware()],
     ),
 

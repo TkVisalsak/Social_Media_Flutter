@@ -6,6 +6,7 @@ import '../../data/network/dio_client.dart';
 
 // Providers
 import '../../data/providers/auth_provider.dart';
+import '../../data/providers/highlight_provider.dart';
 import '../../data/providers/comments_provider.dart';
 import '../../data/providers/feed_provider.dart';
 import '../../data/providers/follow_provider.dart';
@@ -20,6 +21,7 @@ import '../../data/providers/user_provider.dart';
 
 // Repositories
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/highlight_repository.dart';
 import '../../data/repositories/comments_repository.dart';
 import '../../data/repositories/feed_repository.dart';
 import '../../data/repositories/follow_repository.dart';
@@ -68,6 +70,8 @@ class InitialBinding implements Bindings {
         () => StoryProvider(Get.find<Dio>()), fenix: true);
     Get.lazyPut<UserProvider>(
         () => UserProvider(Get.find<Dio>()), fenix: true);
+    Get.lazyPut<HighlightProvider>(
+        () => HighlightProvider(Get.find<Dio>()), fenix: true);
 
     // ── Repositories ─────────────────────────────────────
     Get.lazyPut<AuthRepository>(
@@ -96,5 +100,7 @@ class InitialBinding implements Bindings {
         () => StoryRepositoryImpl(Get.find<StoryProvider>()), fenix: true);
     Get.lazyPut<UserRepository>(
         () => UserRepositoryImpl(Get.find<UserProvider>()), fenix: true);
+    Get.lazyPut<HighlightRepository>(
+        () => HighlightRepositoryImpl(Get.find<HighlightProvider>()), fenix: true);
   }
 }

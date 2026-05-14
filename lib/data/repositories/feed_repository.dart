@@ -8,6 +8,7 @@ import '../providers/feed_provider.dart';
 abstract class FeedRepository {
   Future<ApiResponse<List<PostModel>>> getFeed(int page);
   Future<ApiResponse<List<PostModel>>> getUserPosts(String userId, {int page = 1});
+  Future<ApiResponse<List<PostModel>>> getLikedPosts(String userId);
   Future<ApiResponse<PostModel>>       getPostById(String postId);
   Future<ApiResponse<PostModel>>       createPost({
     String? caption, String? filePath, String visibility, String? location,
@@ -15,6 +16,7 @@ abstract class FeedRepository {
   Future<ApiResponse<void>>            toggleLike(String postId, {required bool wasLiked});
   Future<ApiResponse<int>>             getLikesCount(String postId);
   Future<ApiResponse<void>>            savePost(String postId);
+  Future<ApiResponse<void>>            sharePost(String postId);
 }
 
 class FeedRepositoryImpl implements FeedRepository {
@@ -38,6 +40,26 @@ class FeedRepositoryImpl implements FeedRepository {
       return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to load posts'));
     } catch (e) {
       return ApiResponse.failure('Posts parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<PostModel>>> getLikedPosts(String userId) async {
+    try {
+      final res = await _provider.getLikedPosts(userId);
+      final rawList = _extractFeedList(res.data);
+      final posts = rawList
+          .map((j) => _asMap(j))
+          .whereType<Map<String, dynamic>>()
+          .map(PostModel.fromJson)
+          .toList();
+      return ApiResponse.success(posts);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to load liked posts'));
+    } catch (e) {
+      return ApiResponse.failure('Liked posts parse error: $e');
     }
   }
 
@@ -160,6 +182,20 @@ class FeedRepositoryImpl implements FeedRepository {
       return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to save post'));
     } catch (e) {
       return ApiResponse.failure('Save action failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<void>> sharePost(String postId) async {
+    try {
+      await _provider.sharePost(postId);
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to share post'));
+    } catch (e) {
+      return ApiResponse.failure('Share action failed: $e');
     }
   }
 

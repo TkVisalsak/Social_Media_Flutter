@@ -1,24 +1,34 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 
+import '../../../core/services/socket_service.dart';
 import '../../../data/models/message_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/message_repository.dart';
 
 class DirectController extends GetxController {
-  DirectController(this._repo);
+  DirectController(this._repo, this._socket);
   final MessageRepository _repo;
+  final SocketService     _socket;
 
-  final conversations = <ConversationModel>[].obs;
-  final isLoading = false.obs;
-  final error = RxnString();
-  final myUserId = RxnString();
+  final conversations  = <ConversationModel>[].obs;
+  final isLoading      = false.obs;
+  final error          = RxnString();
+  final myUserId       = RxnString();
+  final onlineUserIds  = <String>{}.obs;
+
+  StreamSubscription<List<String>>? _onlineSub;
 
   @override
   void onInit() {
     super.onInit();
     _loadMe();
     fetchConversations();
+    _onlineSub = _socket.onlineUsersStream.listen(
+      (ids) => onlineUserIds.assignAll(ids),
+    );
   }
 
   Future<void> _loadMe() async {
@@ -70,6 +80,8 @@ class DirectController extends GetxController {
     return '';
   }
 
+  bool isOnline(String userId) => onlineUserIds.contains(userId);
+
   String previewTime(ConversationModel c) {
     final t = c.lastMessage?.createdAt ?? c.createdAt;
     final diff = DateTime.now().difference(t);
@@ -78,5 +90,11 @@ class DirectController extends GetxController {
     if (diff.inHours >= 1) return '${diff.inHours}h';
     if (diff.inMinutes >= 1) return '${diff.inMinutes}m';
     return 'now';
+  }
+
+  @override
+  void onClose() {
+    _onlineSub?.cancel();
+    super.onClose();
   }
 }

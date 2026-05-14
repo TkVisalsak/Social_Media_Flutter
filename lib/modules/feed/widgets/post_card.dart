@@ -100,12 +100,18 @@ class _PostCardState extends State<PostCard> {
         ),
       );
 
-  void _openShare() => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => PostShareSheet(postId: widget.post.id),
-      );
+  void _openShare() {
+    Get.find<FeedController>().incrementShareCount(widget.post.id);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PostShareSheet(
+        postId: widget.post.id,
+        onShared: () {},
+      ),
+    );
+  }
 
   static String _timeAgo(DateTime t) {
     final d = DateTime.now().difference(t);
@@ -391,13 +397,17 @@ class _PostActions extends StatelessWidget {
                   onTap: onRepost,
                 ),
           const SizedBox(width: 18),
-          _Btn(icon: Icons.reply_rounded, label: '', onTap: onShare),
+          _Btn(icon: Icons.reply_rounded, label: _fmt(post.sharesCount), onTap: onShare),
           const Spacer(),
           GestureDetector(
-            onTap: () {},
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(Icons.bookmark_outline, size: 25, color: Colors.black),
+            onTap: () => Get.find<FeedController>().toggleSave(post.id),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                post.isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                size: 25,
+                color: post.isSaved ? const Color(0xFF3797F0) : Colors.black,
+              ),
             ),
           ),
         ],

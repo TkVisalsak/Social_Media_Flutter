@@ -135,6 +135,16 @@ class FeedController extends GetxController {
     posts.refresh();
   }
 
+  // ── Share count ───────────────────────────────────
+  void incrementShareCount(String postId) {
+    final i = posts.indexWhere((p) => p.id == postId);
+    if (i < 0) return;
+    posts[i] = posts[i].copyWith(sharesCount: posts[i].sharesCount + 1);
+    posts.refresh();
+    // fire and forget
+    _repo.sharePost(postId);
+  }
+
   // ── Save ─────────────────────────────────────────
   Future<void> toggleSave(String postId) async {
     final index = posts.indexWhere((p) => p.id == postId);

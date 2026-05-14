@@ -70,4 +70,7 @@ class AuthProvider {
   Future<Response<dynamic>> updateProfilePic(FormData formData) {
     return _dio.put(ApiEndpoints.updateProfile, data: formData);
   }
+
+  Future<Response<dynamic>> updatePrivacy(Map<String, bool> data) =>
+      _dio.put('/auth/privacy', data: data);
 }

@@ -20,11 +20,13 @@ class SocketService {
   final _messageController      = StreamController<Map<String, dynamic>>.broadcast();
   final _notificationController = StreamController<Map<String, dynamic>>.broadcast();
   final _typingController       = StreamController<Map<String, dynamic>>.broadcast();
+  final _onlineUsersController  = StreamController<List<String>>.broadcast();
 
   Stream<bool>                   get connectionStream   => _connectionController.stream;
   Stream<Map<String, dynamic>>   get messageStream      => _messageController.stream;
   Stream<Map<String, dynamic>>   get notificationStream => _notificationController.stream;
   Stream<Map<String, dynamic>>   get typingStream       => _typingController.stream;
+  Stream<List<String>>           get onlineUsersStream  => _onlineUsersController.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -57,7 +59,8 @@ class SocketService {
       ..on('message',     _handleMessage)
       ..on('notification',_handleNotification)
       ..on('userTyping',        _handleTyping)
-      ..on('userStoppedTyping', _handleTyping);
+      ..on('userStoppedTyping', _handleTyping)
+      ..on('onlineUsers', _handleOnlineUsers);
 
     _socket!.connect();
   }
@@ -121,6 +124,14 @@ class SocketService {
     if (data != null) _typingController.add(data);
   }
 
+  void _handleOnlineUsers(dynamic raw) {
+    List<String> ids = [];
+    if (raw is List) {
+      ids = raw.map((e) => e.toString()).toList();
+    }
+    _onlineUsersController.add(ids);
+  }
+
   Map<String, dynamic>? _asMap(dynamic raw) {
     if (raw is Map<String, dynamic>) return raw;
     if (raw is Map) return Map<String, dynamic>.from(raw);
@@ -133,5 +144,6 @@ class SocketService {
     await _messageController.close();
     await _notificationController.close();
     await _typingController.close();
+    await _onlineUsersController.close();
   }
 }

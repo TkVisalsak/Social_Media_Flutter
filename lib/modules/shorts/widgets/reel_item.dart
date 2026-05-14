@@ -59,7 +59,9 @@ class _ReelItemState extends State<ReelItem> {
       ..initialize().then((_) {
           if (!mounted) return;
           _ctrl!.setLooping(true);
-          if (widget.isActive) _ctrl!.play();
+          if (widget.isActive && Get.find<ShortsController>().isTabVisible.value) {
+            _ctrl!.play();
+          }
           setState(() {}); // first frame ready
         });
   }

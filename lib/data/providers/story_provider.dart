@@ -28,4 +28,10 @@ class StoryProvider {
 
   Future<Response<dynamic>> delete(String storyId) =>
       _dio.delete('${ApiEndpoints.stories}/$storyId');
+
+  Future<Response<dynamic>> reply(String storyId, String text) =>
+      _dio.post('${ApiEndpoints.stories}/$storyId/reply', data: {'text': text});
+
+  Future<Response<dynamic>> getViewers(String storyId) =>
+      _dio.get('${ApiEndpoints.stories}/$storyId/viewers');
 }

@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../data/models/post_model.dart';
+import '../controllers/highlights_controller.dart';
 import '../controllers/profile_controller.dart';
 
 class ProfileView extends GetView<ProfileController> {
@@ -37,7 +39,7 @@ class ProfileView extends GetView<ProfileController> {
           return const Center(child: CircularProgressIndicator());
         }
         return DefaultTabController(
-          length: 3,
+          length: 5,
           child: NestedScrollView(
             physics: const BouncingScrollPhysics(),
             headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -74,8 +76,18 @@ class ProfileView extends GetView<ProfileController> {
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
                                   Obx(() => _StatItem(label: 'Posts',     value: '${controller.postsCount.value}')),
-                                  Obx(() => _StatItem(label: 'Followers', value: '${controller.followersCount.value}')),
-                                  Obx(() => _StatItem(label: 'Following', value: '${controller.followingCount.value}')),
+                                  Obx(() => _StatItem(
+                                    label: 'Followers',
+                                    value: '${controller.followersCount.value}',
+                                    onTap: () => Get.toNamed(AppRoutes.FOLLOW_LIST,
+                                        arguments: {'userId': controller.userId ?? '', 'type': 'followers'}),
+                                  )),
+                                  Obx(() => _StatItem(
+                                    label: 'Following',
+                                    value: '${controller.followingCount.value}',
+                                    onTap: () => Get.toNamed(AppRoutes.FOLLOW_LIST,
+                                        arguments: {'userId': controller.userId ?? '', 'type': 'following'}),
+                                  )),
                                 ],
                               ),
                             ),
@@ -173,6 +185,8 @@ class ProfileView extends GetView<ProfileController> {
                       tabs: [
                         Tab(icon: Icon(Icons.grid_on)),
                         Tab(icon: Icon(Icons.video_collection_outlined)),
+                        Tab(icon: Icon(Icons.favorite_border_rounded)),
+                        Tab(icon: Icon(Icons.bookmark_border_rounded)),
                         Tab(icon: Icon(Icons.person_pin_outlined)),
                       ],
                     ),
@@ -184,6 +198,8 @@ class ProfileView extends GetView<ProfileController> {
               children: [
                 _buildPostsGrid(),
                 _buildShortsGrid(),
+                _buildLikedPostsGrid(),
+                _buildSavedPostsGrid(),
                 const Center(child: Text('Photos and videos of you')),
               ],
             ),
@@ -221,16 +237,20 @@ class ProfileView extends GetView<ProfileController> {
         ),
         itemCount: controller.myPosts.length,
         itemBuilder: (context, i) {
-          final url = controller.myPosts[i].firstImageUrl;
+          final post = controller.myPosts[i];
+          final url = post.firstImageUrl;
           if (url == null || url.isEmpty) {
             return Container(
               color: Colors.grey[200],
               child: const Icon(Icons.image_outlined, color: Colors.grey),
             );
           }
-          return Image.network(
-            url, fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+          return GestureDetector(
+            onTap: () => controller.openPostDetail(post),
+            child: Image.network(
+              url, fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Container(color: Colors.grey[200]),
+            ),
           );
         },
       );
@@ -277,21 +297,99 @@ class ProfileView extends GetView<ProfileController> {
       );
     });
   }
+
+  Widget _buildLikedPostsGrid() {
+    return Obx(() {
+      if (controller.isContentLoading.value && controller.likedPosts.isEmpty) {
+        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      }
+      if (controller.likedPosts.isEmpty) {
+        return const Center(
+          child: Text('No liked posts yet', style: TextStyle(color: Colors.grey)),
+        );
+      }
+      return GridView.builder(
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
+        ),
+        itemCount: controller.likedPosts.length,
+        itemBuilder: (context, i) {
+          final PostModel post = controller.likedPosts[i];
+          final url = post.firstImageUrl;
+          if (url == null || url.isEmpty) {
+            return Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_outlined, color: Colors.grey),
+            );
+          }
+          return GestureDetector(
+            onTap: () => controller.openPostDetail(post),
+            child: Image.network(
+              url, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]),
+            ),
+          );
+        },
+      );
+    });
+  }
+
+  Widget _buildSavedPostsGrid() {
+    return Obx(() {
+      if (controller.isContentLoading.value && controller.savedPosts.isEmpty) {
+        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+      }
+      if (controller.savedPosts.isEmpty) {
+        return const Center(
+          child: Text('No saved posts yet', style: TextStyle(color: Colors.grey)),
+        );
+      }
+      return GridView.builder(
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
+        ),
+        itemCount: controller.savedPosts.length,
+        itemBuilder: (context, i) {
+          final PostModel post = controller.savedPosts[i];
+          final url = post.firstImageUrl;
+          if (url == null || url.isEmpty) {
+            return Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_outlined, color: Colors.grey),
+            );
+          }
+          return GestureDetector(
+            onTap: () => controller.openPostDetail(post),
+            child: Image.network(
+              url, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]),
+            ),
+          );
+        },
+      );
+    });
+  }
 }
 
 class _StatItem extends StatelessWidget {
   final String label;
   final String value;
-  const _StatItem({required this.label, required this.value});
+  final VoidCallback? onTap;
+  const _StatItem({required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-        Text(label, style: const TextStyle(fontSize: 14, color: Colors.black)),
-      ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(label, style: const TextStyle(fontSize: 14, color: Colors.black)),
+        ],
+      ),
     );
   }
 }
@@ -343,13 +441,66 @@ class _HighlightsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ctrl = Get.find<HighlightsController>();
     return SizedBox(
       height: 100,
-      child: ListView.builder(
+      child: Obx(() => ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: 1,
-        itemBuilder: (_, __) => const _HighlightItem(label: 'New', isAdd: true),
+        children: [
+          _HighlightItem(
+            label: 'New',
+            isAdd: true,
+            onTap: () => _showCreateDialog(context, ctrl),
+          ),
+          ...ctrl.highlights.map((h) => _HighlightItem(
+            label: h.title,
+            coverUrl: h.coverUrl,
+            onLongPress: () => _confirmDelete(context, ctrl, h.id),
+          )),
+        ],
+      )),
+    );
+  }
+
+  void _showCreateDialog(BuildContext context, HighlightsController ctrl) {
+    final nameCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('New Highlight'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'Highlight name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              final t = nameCtrl.text.trim();
+              if (t.isNotEmpty) ctrl.createHighlight(t);
+              Navigator.pop(context);
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, HighlightsController ctrl, String id) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Highlight?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () { ctrl.deleteHighlight(id); Navigator.pop(context); },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
@@ -358,25 +509,46 @@ class _HighlightsSection extends StatelessWidget {
 class _HighlightItem extends StatelessWidget {
   final String label;
   final bool isAdd;
-  const _HighlightItem({required this.label, this.isAdd = false});
+  final String? coverUrl;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  const _HighlightItem({required this.label, this.isAdd = false, this.coverUrl, this.onTap, this.onLongPress});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 18),
-      child: Column(
-        children: [
-          Container(
-            width: 64, height: 64,
-            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey[200]!)),
-            child: isAdd
-                ? const Icon(Icons.add, size: 30)
-                : CircleAvatar(backgroundColor: Colors.grey[100],
-                    child: const Icon(Icons.image_outlined, color: Colors.grey)),
-          ),
-          const SizedBox(height: 6),
-          Text(label, style: const TextStyle(fontSize: 12)),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 18),
+        child: Column(
+          children: [
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: isAdd
+                  ? const Icon(Icons.add, size: 30)
+                  : coverUrl != null && coverUrl!.isNotEmpty
+                      ? CircleAvatar(backgroundImage: NetworkImage(coverUrl!))
+                      : CircleAvatar(
+                          backgroundColor: Colors.grey[100],
+                          child: const Icon(Icons.collections_outlined, color: Colors.grey),
+                        ),
+            ),
+            const SizedBox(height: 6),
+            SizedBox(
+              width: 64,
+              child: Text(label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -404,7 +576,11 @@ class _ProfileOptionsSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _MenuItem(icon: Icons.settings_outlined,      label: 'Settings'),
+          _MenuItem(
+            icon: Icons.settings_outlined,
+            label: 'Settings & Privacy',
+            onTap: () { Navigator.pop(context); Get.toNamed(AppRoutes.SETTINGS); },
+          ),
           _MenuItem(icon: Icons.archive_outlined,       label: 'Archive'),
           _MenuItem(icon: Icons.bar_chart_outlined,     label: 'Your activity'),
           _MenuItem(icon: Icons.notifications_outlined, label: 'Notifications'),

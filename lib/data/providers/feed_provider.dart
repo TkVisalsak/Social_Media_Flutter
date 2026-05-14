@@ -47,6 +47,12 @@ class FeedProvider {
       _dio.get('${ApiEndpoints.feedsByUser}/$userId',
           queryParameters: {'page': page, 'limit': limit});
 
+  Future<Response<dynamic>> getLikedPosts(String userId) =>
+      _dio.get('${ApiEndpoints.feeds}/liked/$userId');
+
+  Future<Response<dynamic>> sharePost(String postId) =>
+      _dio.post('${ApiEndpoints.likes}/$postId/share');
+
   Future<Response<dynamic>> createPost({
     String? caption,
     String? filePath,

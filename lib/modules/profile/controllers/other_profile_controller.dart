@@ -88,14 +88,17 @@ class OtherProfileController extends GetxController {
     if (res.success && res.data != null) {
       Get.toNamed(AppRoutes.CHAT, arguments: res.data);
     } else {
-      final msg = res.error ?? 'Cannot open DM';
       Get.snackbar(
         'Message',
-        msg.contains('mutual') ? 'Follow each other to send messages' : msg,
+        res.error ?? 'Cannot open conversation',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 3),
       );
     }
+  }
+
+  void openPostDetail(PostModel post) {
+    Get.toNamed(AppRoutes.POST_DETAIL, arguments: post);
   }
 
   Future<void> toggleFollow() async {

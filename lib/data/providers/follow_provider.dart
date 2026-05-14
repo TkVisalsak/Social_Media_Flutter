@@ -20,4 +20,7 @@ class FollowProvider {
 
   Future<Response<dynamic>> following(String userId) =>
       _dio.get('${ApiEndpoints.following}/$userId');
+
+  Future<Response<dynamic>> notFollowingBack() =>
+      _dio.get(ApiEndpoints.followNotFollowingBack);
 }

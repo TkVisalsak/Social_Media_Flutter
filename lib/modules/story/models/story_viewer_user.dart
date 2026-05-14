@@ -2,12 +2,14 @@ import 'story_viewer_item.dart';
 
 class StoryViewerUser {
   bool viewed;
+  final String userId;
   final String username;
   final String profileImage;
   final bool isNetworkImage;
   final List<StoryViewerItem> stories;
 
   StoryViewerUser({
+    required this.userId,
     required this.username,
     required this.profileImage,
     this.isNetworkImage = true,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -31,18 +33,30 @@ class EditProfileView extends GetView<ProfileController> {
             Center(
               child: Column(
                 children: [
-                  Obx(() => CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.grey[200],
-                    backgroundImage: controller.profilePic.value.isNotEmpty
-                        ? NetworkImage(controller.profilePic.value) as ImageProvider : null,
-                    child: controller.profilePic.value.isEmpty
-                        ? Text(controller.username.value.isNotEmpty ? controller.username.value[0].toUpperCase() : '?',
-                            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold))
-                        : null,
-                  )),
+                  Obx(() {
+                    final picked = controller.pickedImagePath.value;
+                    final pic    = controller.profilePic.value;
+                    ImageProvider? image;
+                    if (picked != null) {
+                      image = FileImage(File(picked));
+                    } else if (pic.isNotEmpty) {
+                      image = NetworkImage(pic);
+                    }
+                    return CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage: image,
+                      child: image == null
+                          ? Text(
+                              controller.username.value.isNotEmpty
+                                  ? controller.username.value[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold))
+                          : null,
+                    );
+                  }),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: controller.pickProfileImage,
                     child: const Text('Edit picture',
                         style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.bold, fontSize: 14)),
                   ),

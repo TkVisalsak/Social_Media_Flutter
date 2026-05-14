@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/middlewares/auth_middleware.dart';
@@ -8,6 +9,8 @@ import '../../../data/repositories/auth_repository.dart';
 class AuthController extends GetxController {
   final AuthRepository _repo;
   AuthController(this._repo);
+
+  final _picker = ImagePicker();
 
   // Form fields
   final email           = ''.obs;
@@ -20,10 +23,16 @@ class AuthController extends GetxController {
   final obscurePassword = true.obs;
   final obscureConfirm  = true.obs;
   final agreedToTerms   = true.obs;
+  final profilePicPath  = RxnString();
 
   void togglePasswordVisibility() => obscurePassword(!obscurePassword.value);
   void toggleConfirmVisibility()  => obscureConfirm(!obscureConfirm.value);
   void toggleTerms()              => agreedToTerms(!agreedToTerms.value);
+
+  Future<void> pickProfileImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+    if (picked != null) profilePicPath(picked.path);
+  }
 
   // ── Login ────────────────────────────────────────
   Future<void> login() async {
@@ -99,6 +108,9 @@ class AuthController extends GetxController {
     if (res.success) {
       AuthSession.setLoggedIn(true);
       Get.find<SocketService>().connect();
+      if (profilePicPath.value != null) {
+        await _repo.uploadProfilePic(profilePicPath.value!);
+      }
       Get.offAllNamed(AppRoutes.ONBOARDING_DOB);
     } else {
       Get.snackbar('Registration failed', res.error ?? 'Something went wrong',

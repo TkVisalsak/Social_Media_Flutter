@@ -4,12 +4,14 @@ import 'package:get/get.dart';
 
 class PostShareSheet extends StatelessWidget {
   final String postId;
-  const PostShareSheet({super.key, required this.postId});
+  final VoidCallback? onShared;
+  const PostShareSheet({super.key, required this.postId, this.onShared});
 
   String get _deepLink => 'socialmedia://posts/$postId';
 
   void _copyLink(BuildContext context) {
     Clipboard.setData(ClipboardData(text: _deepLink));
+    onShared?.call();
     Navigator.pop(context);
     Get.snackbar(
       'Link copied',

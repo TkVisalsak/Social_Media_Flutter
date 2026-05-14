@@ -34,10 +34,14 @@ class ChatViewController extends GetxController {
   final displayAvatar     = RxnString();
   final isLoading         = false.obs;
   final isSending         = false.obs;
+  final isMutual          = true.obs;
+  final canSend           = true.obs;
 
   String? _myId;
   String? _otherUserId;
   String? _conversationId;
+
+  String? get otherUserId => _otherUserId;
   StreamSubscription<Map<String, dynamic>>? _msgSub;
 
   @override
@@ -53,6 +57,8 @@ class ChatViewController extends GetxController {
   Future<void> _initFromConversation(ConversationModel c) async {
     final me = await LocalStorage.user;
     _myId = me?.id;
+
+    isMutual(c.isMutual);
 
     if (c.isGroup) {
       displayName.value   = c.name ?? 'Group';
@@ -85,6 +91,17 @@ class ChatViewController extends GetxController {
       _scrollToBottom();
     }
     isLoading(false);
+    _updateCanSend();
+  }
+
+  void _updateCanSend() {
+    if (isMutual.value) {
+      canSend(true);
+      return;
+    }
+    final myCount    = messages.where((m) => m.isMe).length;
+    final theirCount = messages.where((m) => !m.isMe).length;
+    canSend(myCount == 0 || theirCount > 0);
   }
 
   // ── Socket ────────────────────────────────────────────────────
@@ -115,6 +132,7 @@ class ChatViewController extends GetxController {
       messages.add(_toDisplay(msg));
       _scrollToBottom();
       _socket.markRead(_conversationId!);
+      _updateCanSend();
     } catch (_) {
       // Ignore malformed payloads.
     }
@@ -124,13 +142,14 @@ class ChatViewController extends GetxController {
 
   void sendMessage() {
     final text = messageController.text.trim();
-    if (text.isEmpty || _conversationId == null) return;
+    if (text.isEmpty || _conversationId == null || !canSend.value) return;
     messageController.clear();
 
     // Optimistic bubble while we wait for the server echo.
     final tempId = '_temp_${DateTime.now().millisecondsSinceEpoch}';
     messages.add(ChatMessage(id: tempId, text: text, isMe: true));
     _scrollToBottom();
+    _updateCanSend();
 
     if (_socket.isConnected) {
       // Preferred path: socket (server saves + broadcasts newMessage back).

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../models/message_model.dart';
 import '../models/story_model.dart';
 import '../network/api_response.dart';
 import '../network/exceptions/app_exception.dart';
@@ -16,6 +17,8 @@ abstract class StoryRepository {
   Future<ApiResponse<List<StoryModel>>> getMyStories();
   Future<ApiResponse<void>> recordView(String storyId);
   Future<ApiResponse<void>> deleteStory(String storyId);
+  Future<ApiResponse<ConversationModel>> replyToStory(String storyId, String text);
+  Future<ApiResponse<List<StoryViewer>>> getViewers(String storyId);
 }
 
 class StoryRepositoryImpl implements StoryRepository {
@@ -114,6 +117,48 @@ class StoryRepositoryImpl implements StoryRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to delete story'));
     } catch (e) {
       return ApiResponse.failure('Delete story failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<ConversationModel>> replyToStory(String storyId, String text) async {
+    try {
+      final res  = await _provider.reply(storyId, text);
+      final body = RepoHelpers.normalizeBody(res.data);
+      final raw  = body['conversation'] ?? body;
+      if (raw is! Map<String, dynamic>) {
+        return ApiResponse.failure('Invalid reply response');
+      }
+      return ApiResponse.success(ConversationModel.fromJson(raw));
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to send reply'));
+    } catch (e) {
+      return ApiResponse.failure('Reply failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<StoryViewer>>> getViewers(String storyId) async {
+    try {
+      final res  = await _provider.getViewers(storyId);
+      final body = RepoHelpers.normalizeBody(res.data);
+      final list = (body['viewers'] as List? ?? []);
+      final viewers = list
+          .map((e) => RepoHelpers.asMap(e))
+          .whereType<Map<String, dynamic>>()
+          .map(StoryViewer.fromJson)
+          .toList();
+      return ApiResponse.success(viewers);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load viewers'));
+    } catch (e) {
+      return ApiResponse.failure('$e');
     }
   }
 }

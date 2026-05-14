@@ -43,6 +43,12 @@ abstract class AuthRepository {
   });
 
   Future<ApiResponse<UserModel>> uploadProfilePic(String filePath);
+
+  Future<ApiResponse<void>> updatePrivacy({
+    bool? followersListPublic,
+    bool? followingListPublic,
+    bool? savedPostsPublic,
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -270,6 +276,44 @@ class AuthRepositoryImpl implements AuthRepository {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
       return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Upload failed'));
+    } catch (e) {
+      return ApiResponse.failure('Unexpected error');
+    }
+  }
+
+  // ── Privacy settings ──────────────────────
+
+  @override
+  Future<ApiResponse<void>> updatePrivacy({
+    bool? followersListPublic,
+    bool? followingListPublic,
+    bool? savedPostsPublic,
+  }) async {
+    try {
+      final payload = <String, bool>{};
+      if (followersListPublic != null) payload['followersListPublic'] = followersListPublic;
+      if (followingListPublic != null) payload['followingListPublic'] = followingListPublic;
+      if (savedPostsPublic != null) payload['savedPostsPublic'] = savedPostsPublic;
+
+      final res = await _provider.updatePrivacy(payload);
+
+      // Update cached user with new privacy settings
+      final cached = await LocalStorage.user;
+      if (cached != null) {
+        final body = _normalizeBody(res.data);
+        final updatedUser = _extractUser(body);
+        await LocalStorage.setUser(updatedUser ?? cached.copyWith(
+          followersListPublic: followersListPublic ?? cached.followersListPublic,
+          followingListPublic: followingListPublic ?? cached.followingListPublic,
+          savedPostsPublic: savedPostsPublic ?? cached.savedPostsPublic,
+        ));
+      }
+
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to update privacy'));
     } catch (e) {
       return ApiResponse.failure('Unexpected error');
     }

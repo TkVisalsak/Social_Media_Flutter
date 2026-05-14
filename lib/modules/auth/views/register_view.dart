@@ -1,7 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
-import '../../../app/routes/app_routes.dart';
 import '../widgets/auth_widgets.dart';
 
 class RegisterView extends GetView<AuthController> {
@@ -46,6 +47,34 @@ class RegisterView extends GetView<AuthController> {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 32),
+              // Avatar picker
+              Center(
+                child: GestureDetector(
+                  onTap: controller.pickProfileImage,
+                  child: Obx(() {
+                    final path = controller.profilePicPath.value;
+                    return Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 45,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage: path != null ? FileImage(File(path)) as ImageProvider : null,
+                          child: path == null ? const Icon(Icons.person, size: 40, color: Colors.grey) : null,
+                        ),
+                        Positioned(
+                          bottom: 0, right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: const BoxDecoration(color: Color(0xFF4361EE), shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 24),
               // Username
               AuthTextField(
                 label: 'Username',

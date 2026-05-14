@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../app/routes/app_routes.dart';
+import '../../notifications/controllers/notifications_controller.dart';
 import '../controllers/feed_controller.dart';
 import '../screens/create_post_screen.dart';
 
@@ -16,6 +18,11 @@ class HomeAppBar extends GetWidget<FeedController> {
         bottom: false,
         child: Row(
           children: [
+            IconButton(
+              onPressed: () => Get.toNamed(AppRoutes.FRIEND_SUGGESTIONS),
+              icon: const Icon(Icons.people_outline_rounded, size: 26),
+              splashRadius: 22,
+            ),
             const Expanded(
               child: Text(
                 'Social app',
@@ -29,11 +36,38 @@ class HomeAppBar extends GetWidget<FeedController> {
             ),
             _PlusButton(onTap: () => _showCreateSheet(context)),
             const SizedBox(width: 4),
-            IconButton(
-              onPressed: controller.openNotifications,
-              icon: const Icon(CupertinoIcons.bell, size: 26),
-              splashRadius: 22,
-            ),
+            Obx(() {
+              final notifCtrl = Get.find<NotificationsController>();
+              final count = notifCtrl.unreadCount;
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    onPressed: controller.openNotifications,
+                    icon: const Icon(CupertinoIcons.bell, size: 26),
+                    splashRadius: 22,
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      top: 6,
+                      right: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF4D6D),
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        child: Text(
+                          count > 99 ? '99+' : '$count',
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            }),
           ],
         ),
       ),

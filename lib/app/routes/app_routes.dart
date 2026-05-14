@@ -41,4 +41,10 @@ abstract class AppRoutes {
   // Notifications / Settings
   static const NOTIFICATIONS = '/notifications';
   static const SETTINGS      = '/settings';
+
+  // Follow list
+  static const FOLLOW_LIST   = '/follow-list';
+
+  // Friend Suggestions
+  static const FRIEND_SUGGESTIONS = '/friend-suggestions';
 }

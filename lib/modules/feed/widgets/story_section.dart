@@ -15,10 +15,12 @@ class StorySection extends GetWidget<StoryFeedController> {
       final username = first.user.username ?? first.user.fullName ?? 'user';
       final profilePic = first.user.profilePic ?? '';
       return StoryViewerUser(
+        userId: first.user.id,
         username: username,
         profileImage: profilePic,
         isNetworkImage: profilePic.startsWith('http'),
         stories: userStories.expand((s) => s.mediaUrl.map((m) => StoryViewerItem(
+          storyId: s.id,
           type: m.type == 'video' ? StoryViewerType.video : StoryViewerType.image,
           media: m.url,
           isNetwork: m.url.startsWith('http'),
