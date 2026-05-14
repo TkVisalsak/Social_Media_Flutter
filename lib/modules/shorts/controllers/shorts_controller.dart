@@ -9,9 +9,10 @@ class ShortsController extends GetxController {
   ShortsController(this._repo);
   final ShortRepository _repo;
 
-  final shorts    = <ShortModel>[].obs;
-  final isLoading = false.obs;
-  final error     = RxnString();
+  final shorts       = <ShortModel>[].obs;
+  final isLoading    = false.obs;
+  final error        = RxnString();
+  final isTabVisible = true.obs;
 
   @override
   void onInit() {

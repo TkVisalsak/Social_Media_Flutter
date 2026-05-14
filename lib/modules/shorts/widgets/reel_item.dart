@@ -26,9 +26,10 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   VideoPlayerController? _ctrl;
-  bool _showHeart   = false;
-  bool _isFollowing = false;
-  Timer? _tapTimer;
+  bool    _showHeart   = false;
+  bool    _isFollowing = false;
+  Timer?  _tapTimer;
+  Worker? _visibilityWorker;
 
   // ── Video lifecycle ───────────────────────────────────────────
 
@@ -36,6 +37,17 @@ class _ReelItemState extends State<ReelItem> {
   void initState() {
     super.initState();
     _initVideo();
+    _visibilityWorker = ever(
+      Get.find<ShortsController>().isTabVisible,
+      (bool visible) {
+        if (!mounted || _ctrl == null) return;
+        if (visible && widget.isActive) {
+          _ctrl!.play();
+        } else if (!visible) {
+          _ctrl!.pause();
+        }
+      },
+    );
   }
 
   void _initVideo() {
@@ -67,6 +79,7 @@ class _ReelItemState extends State<ReelItem> {
 
   @override
   void dispose() {
+    _visibilityWorker?.dispose();
     _tapTimer?.cancel();
     _ctrl?.removeListener(_onVideoStateChange);
     _ctrl?.dispose();

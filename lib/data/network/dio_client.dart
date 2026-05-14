@@ -7,7 +7,7 @@ import 'interceptors/refresh_interceptor.dart';
 import '../providers/local_storage.dart';
 
 class DioClient {
-  static const baseUrl = 'http://localhost:5001/api';
+  static const baseUrl = 'https://social-media-uav6.onrender.com/api';
   static Dio? _instance;
 
   DioClient._();

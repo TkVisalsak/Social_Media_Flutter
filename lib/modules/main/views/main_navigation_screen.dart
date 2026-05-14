@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
 import '../../../shared/widgets/animated_nav_bar.dart';
 import '../../feed/views/feed_view.dart';
 import '../../message/views/message_view.dart';
 import '../../profile/views/profile_view.dart';
 import '../../search/views/search_view.dart';
+import '../../shorts/controllers/shorts_controller.dart';
 import '../../shorts/views/shorts_view.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -44,7 +46,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       bottomNavigationBar: AnimatedNavBar(
         items: _navItems,
         selectedIndex: currentIndex,
-        onChanged: (index) => setState(() { currentIndex = index; }),
+        onChanged: (index) {
+          setState(() { currentIndex = index; });
+          Get.find<ShortsController>().isTabVisible.value = (index == 1);
+        },
       ),
     );
   }

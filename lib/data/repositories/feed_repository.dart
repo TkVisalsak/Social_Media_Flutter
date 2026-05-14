@@ -179,6 +179,12 @@ class FeedRepositoryImpl implements FeedRepository {
     return recursive ?? const [];
   }
 
+  Map<String, dynamic> _normalizeBody(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return const {};
+  }
+
   Map<String, dynamic>? _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
