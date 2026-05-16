@@ -7,7 +7,12 @@ import 'repo_helpers.dart';
 
 abstract class HighlightRepository {
   Future<ApiResponse<List<HighlightModel>>> getMyHighlights();
-  Future<ApiResponse<HighlightModel>> create(String title, List<String> storyIds, {String? coverUrl});
+  Future<ApiResponse<HighlightModel>> create(
+    String title,
+    List<String> storyIds, {
+    String? coverUrl,
+    String? coverImagePath,
+  });
   Future<ApiResponse<void>> delete(String id);
 }
 
@@ -31,11 +36,21 @@ class HighlightRepositoryImpl implements HighlightRepository {
   }
 
   @override
-  Future<ApiResponse<HighlightModel>> create(String title, List<String> storyIds, {String? coverUrl}) async {
+  Future<ApiResponse<HighlightModel>> create(
+    String title,
+    List<String> storyIds, {
+    String? coverUrl,
+    String? coverImagePath,
+  }) async {
     try {
-      final res = await _provider.create(title, storyIds, coverUrl: coverUrl);
+      final res = await _provider.create(
+        title,
+        storyIds,
+        coverUrl: coverUrl,
+        coverImagePath: coverImagePath,
+      );
       final body = RepoHelpers.normalizeBody(res.data);
-      final raw = body['highlight'] ?? body;
+      final raw = body['data'] ?? body['highlight'] ?? body;
       if (raw is! Map<String, dynamic>) return ApiResponse.failure('Invalid response');
       return ApiResponse.success(HighlightModel.fromJson(raw));
     } on AppException catch (e) { return ApiResponse.failure(e.message); }

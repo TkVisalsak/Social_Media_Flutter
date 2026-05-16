@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes/app_routes.dart';
@@ -160,10 +163,16 @@ class ProfileView extends GetView<ProfileController> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: _ProfileButton(label: 'Share Profile', onPressed: () {}),
+                              child: _ProfileButton(
+                                label: 'Share Profile',
+                                onPressed: () => controller.shareProfile(),
+                              ),
                             ),
                             const SizedBox(width: 8),
-                            _ProfileIconButton(icon: Icons.person_add_outlined, onPressed: () {}),
+                            _ProfileIconButton(
+                              icon: Icons.person_add_outlined,
+                              onPressed: () => Get.toNamed(AppRoutes.FRIEND_SUGGESTIONS),
+                            ),
                           ],
                         ),
                       ),
@@ -465,26 +474,77 @@ class _HighlightsSection extends StatelessWidget {
 
   void _showCreateDialog(BuildContext context, HighlightsController ctrl) {
     final nameCtrl = TextEditingController();
+    final picker = ImagePicker();
+    XFile? pickedImage;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('New Highlight'),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(hintText: 'Highlight name'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () {
-              final t = nameCtrl.text.trim();
-              if (t.isNotEmpty) ctrl.createHighlight(t);
-              Navigator.pop(context);
-            },
-            child: const Text('Add'),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('New Highlight'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Cover photo picker
+              GestureDetector(
+                onTap: () async {
+                  final img = await picker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 80,
+                  );
+                  if (img != null) {
+                    setState(() => pickedImage = img);
+                  }
+                },
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey[100],
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: pickedImage != null
+                      ? ClipOval(
+                          child: Image.file(
+                            File(pickedImage!.path),
+                            fit: BoxFit.cover,
+                            width: 80,
+                            height: 80,
+                          ),
+                        )
+                      : const Icon(Icons.add_a_photo_outlined,
+                          size: 32, color: Colors.grey),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text('Add cover photo',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Highlight name'),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final t = nameCtrl.text.trim();
+                if (t.isNotEmpty) {
+                  ctrl.createHighlight(t, coverImagePath: pickedImage?.path);
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        ),
       ),
     );
   }

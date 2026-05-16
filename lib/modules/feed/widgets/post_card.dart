@@ -101,14 +101,14 @@ class _PostCardState extends State<PostCard> {
       );
 
   void _openShare() {
-    Get.find<FeedController>().incrementShareCount(widget.post.id);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => PostShareSheet(
         postId: widget.post.id,
-        onShared: () {},
+        onShared: () =>
+            Get.find<FeedController>().incrementShareCount(widget.post.id),
       ),
     );
   }
@@ -391,7 +391,7 @@ class _PostActions extends StatelessWidget {
                       strokeWidth: 2, color: Colors.black54))
               : _Btn(
                   icon: Icons.repeat_rounded,
-                  label: _fmt(post.sharesCount),
+                  label: _fmt(post.repostsCount),
                   color: isReposted ? AppColors.repost : Colors.black,
                   scale: isReposted ? 1.15 : 1.0,
                   onTap: onRepost,

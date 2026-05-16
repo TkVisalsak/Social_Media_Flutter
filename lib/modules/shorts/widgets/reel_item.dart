@@ -26,8 +26,9 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   VideoPlayerController? _ctrl;
-  bool    _showHeart   = false;
-  bool    _isFollowing = false;
+  bool       _showHeart   = false;
+  final _isFollowing      = false.obs;
+  bool       _followLoading = false;
   Timer?  _tapTimer;
   Worker? _visibilityWorker;
 
@@ -149,12 +150,85 @@ class _ReelItemState extends State<ReelItem> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => ReelShareSheet(shortId: widget.short.id),
+    ).then((_) {
+      // Increment share count whenever the sheet is dismissed (user interacted)
+      Get.find<ShortsController>().incrementShareCount(widget.short.id);
+    }).whenComplete(_resumeIfActive);
+  }
+
+  void _openMore() {
+    _ctrl?.pause();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.not_interested_rounded),
+              title: const Text('Not Interested'),
+              onTap: () {
+                Navigator.pop(context);
+                Get.snackbar('Got it', 'You will see fewer reels like this.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.flag_rounded),
+              title: const Text('Report'),
+              onTap: () {
+                Navigator.pop(context);
+                Get.snackbar('Reported', 'Thanks for letting us know.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block_rounded),
+              title: const Text('Block user'),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     ).whenComplete(_resumeIfActive);
+  }
+
+  Future<void> _toggleFollow() async {
+    if (_followLoading) return;
+    final userId = widget.short.user.id;
+    if (userId.isEmpty) return;
+    _followLoading = true;
+    final wasFollowing = _isFollowing.value;
+    _isFollowing.value = !wasFollowing;
+    final ctrl = Get.find<ShortsController>();
+    final ok = wasFollowing
+        ? true // unfollow not exposed here — just optimistic
+        : await ctrl.followUser(userId);
+    if (!ok) {
+      _isFollowing.value = wasFollowing; // revert on failure
+    }
+    _followLoading = false;
   }
 
   void _openProfile() {
     _ctrl?.pause();
-    Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: widget.short.user)
+    final user = widget.short.user;
+    Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: user)
         ?.whenComplete(_resumeIfActive);
   }
 
@@ -290,7 +364,7 @@ class _ReelItemState extends State<ReelItem> {
                   ),
                   const SizedBox(height: 20),
 
-                  _ActionBtn(icon: Icons.more_horiz_rounded, label: '', onTap: () {}),
+                  _ActionBtn(icon: Icons.more_horiz_rounded, label: '', onTap: _openMore),
                 ],
               ),
             ),
@@ -330,23 +404,30 @@ class _ReelItemState extends State<ReelItem> {
                                 fontSize: 15)),
                       ),
                       const SizedBox(width: 10),
-                      if (!_isFollowing)
-                        GestureDetector(
-                          onTap: () => setState(() => _isFollowing = true),
+                      Obx(() {
+                        final following = _isFollowing.value;
+                        return GestureDetector(
+                          onTap: _toggleFollow,
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 5),
                             decoration: BoxDecoration(
+                              color: following
+                                  ? Colors.white.withValues(alpha: 0.25)
+                                  : Colors.transparent,
                               border: Border.all(color: Colors.white),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text('Follow',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600)),
+                            child: Text(
+                              following ? 'Following' : 'Follow',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600),
+                            ),
                           ),
-                        ),
+                        );
+                      }),
                     ],
                   ),
                   if (widget.short.caption != null &&

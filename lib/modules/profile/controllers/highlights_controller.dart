@@ -19,8 +19,8 @@ class HighlightsController extends GetxController {
     isLoading(false);
   }
 
-  Future<void> createHighlight(String title) async {
-    final res = await _repo.create(title, []);
+  Future<void> createHighlight(String title, {String? coverImagePath}) async {
+    final res = await _repo.create(title, [], coverImagePath: coverImagePath);
     if (res.success && res.data != null) highlights.insert(0, res.data!);
   }
 

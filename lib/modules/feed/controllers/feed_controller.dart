@@ -36,6 +36,11 @@ class FeedController extends GetxController {
     if (isLoading.value) return;
     if (!hasMore.value && !refresh) return;
 
+    // Snapshot existing posts so we can preserve local count state on refresh.
+    final Map<String, PostModel> existingById = {
+      for (final p in posts) p.id: p
+    };
+
     if (refresh) {
       _page = 1;
       hasMore(true);
@@ -48,7 +53,25 @@ class FeedController extends GetxController {
     final res = await _repo.getFeed(_page);
     print('res: ${res.data}');
     if (res.success) {
-      final newPosts = res.data!;
+      final newPosts = res.data!.map((serverPost) {
+        final existing = existingById[serverPost.id];
+        if (existing == null) return serverPost;
+        // Preserve local counts & interaction state that the server doesn't
+        // persist (likesCount/commentsCount may be stale on the server).
+        // Keep local count if higher (guards against refresh racing an optimistic update).
+        // Trust server for isLiked/isSaved — those are computed from real DB tables.
+        return serverPost.copyWith(
+          likesCount: existing.likesCount > serverPost.likesCount
+              ? existing.likesCount
+              : serverPost.likesCount,
+          commentsCount: existing.commentsCount > serverPost.commentsCount
+              ? existing.commentsCount
+              : serverPost.commentsCount,
+          repostsCount: existing.repostsCount > serverPost.repostsCount
+              ? existing.repostsCount
+              : serverPost.repostsCount,
+        );
+      }).toList();
       posts.addAll(newPosts);
       if (newPosts.isEmpty || newPosts.length < 20) hasMore(false);
       _page++;
@@ -131,7 +154,7 @@ class FeedController extends GetxController {
     final i = posts.indexWhere((p) => p.id == postId);
     if (i < 0) return;
     final delta = reposted ? 1 : -1;
-    posts[i] = posts[i].copyWith(sharesCount: posts[i].sharesCount + delta);
+    posts[i] = posts[i].copyWith(repostsCount: posts[i].repostsCount + delta);
     posts.refresh();
   }
 
@@ -151,10 +174,13 @@ class FeedController extends GetxController {
     if (index < 0) return;
 
     final old = posts[index];
-    posts[index] = old.copyWith(isSaved: !old.isSaved);
+    final wasSaved = old.isSaved;
+    posts[index] = old.copyWith(isSaved: !wasSaved);
     posts.refresh();
 
-    final res = await _repo.savePost(postId);
+    final res = wasSaved
+        ? await _repo.unsavePost(postId)
+        : await _repo.savePost(postId);
     if (!res.success) {
       posts[index] = old;
       posts.refresh();

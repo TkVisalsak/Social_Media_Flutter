@@ -16,6 +16,7 @@ abstract class FeedRepository {
   Future<ApiResponse<void>>            toggleLike(String postId, {required bool wasLiked});
   Future<ApiResponse<int>>             getLikesCount(String postId);
   Future<ApiResponse<void>>            savePost(String postId);
+  Future<ApiResponse<void>>            unsavePost(String postId);
   Future<ApiResponse<void>>            sharePost(String postId);
 }
 
@@ -182,6 +183,20 @@ class FeedRepositoryImpl implements FeedRepository {
       return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to save post'));
     } catch (e) {
       return ApiResponse.failure('Save action failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<void>> unsavePost(String postId) async {
+    try {
+      await _provider.unsavePost(postId);
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to unsave post'));
+    } catch (e) {
+      return ApiResponse.failure('Unsave action failed: $e');
     }
   }
 

@@ -99,6 +99,7 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
           focusNode: _searchFocus,
           isActive: _searchActive,
           onTap: () => setState(() { _searchActive = true; }),
+          onChanged: (v) => setState(() { _query = v; }),
           onCancel: () {
             setState(() { _searchActive = false; _query = ''; });
             _searchController.clear();

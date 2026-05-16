@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -167,6 +169,42 @@ class ChatViewController extends GetxController {
     if (res.success && res.data != null) {
       final idx = messages.indexWhere((m) => m.id == tempId);
       if (idx != -1) messages[idx] = _toDisplay(res.data!);
+    }
+  }
+
+  /// Called when the user picks an image from the camera.
+  Future<void> sendImageFile(String filePath) async {
+    if (_conversationId == null && _otherUserId == null) return;
+
+    final tempId = '_temp_img_${DateTime.now().millisecondsSinceEpoch}';
+    messages.add(ChatMessage(id: tempId, text: '📷 Photo', isMe: true, isImage: true));
+    _scrollToBottom();
+
+    isSending(true);
+    try {
+      final bytes = await File(filePath).readAsBytes();
+      final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      final res = await _repo.sendMessage(
+        _otherUserId ?? '',
+        image: base64Image,
+      );
+
+      if (res.success && res.data != null) {
+        final idx = messages.indexWhere((m) => m.id == tempId);
+        if (idx != -1) messages[idx] = _toDisplay(res.data!);
+      } else {
+        // Remove optimistic bubble on failure.
+        messages.removeWhere((m) => m.id == tempId);
+        Get.snackbar('Error', res.error ?? 'Failed to send image',
+            snackPosition: SnackPosition.BOTTOM);
+      }
+    } catch (e) {
+      messages.removeWhere((m) => m.id == tempId);
+      Get.snackbar('Error', 'Failed to send image',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isSending(false);
     }
   }
 

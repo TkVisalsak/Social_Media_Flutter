@@ -17,6 +17,7 @@ abstract class ShortRepository {
   });
   Future<ApiResponse<void>> recordView(String shortId);
   Future<ApiResponse<void>> toggleLike(String shortId);
+  Future<ApiResponse<void>> incrementShare(String shortId);
   Future<ApiResponse<bool>> getLikeStatus(String shortId);
 
   Future<ApiResponse<List<CommentModel>>> getComments(String shortId);
@@ -126,6 +127,21 @@ class ShortRepositoryImpl implements ShortRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to like short'));
     } catch (e) {
       return ApiResponse.failure('Like failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<void>> incrementShare(String shortId) async {
+    try {
+      await _provider.incrementShare(shortId);
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to share short'));
+    } catch (e) {
+      return ApiResponse.failure('Share failed: $e');
     }
   }
 

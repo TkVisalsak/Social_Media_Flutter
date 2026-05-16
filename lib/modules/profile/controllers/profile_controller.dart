@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -13,6 +14,7 @@ import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/comments_repository.dart';
 import '../../../data/repositories/feed_repository.dart';
+import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/save_repository.dart';
 import '../../../data/repositories/short_repository.dart';
 import '../../post_detail/controllers/post_detail_controller.dart';
@@ -24,8 +26,9 @@ class ProfileController extends GetxController {
   final FeedRepository  _feedRepo;
   final ShortRepository _shortRepo;
   final SaveRepository  _saveRepo;
+  final FollowRepository _followRepo;
 
-  ProfileController(this._authRepo, this._feedRepo, this._shortRepo, this._saveRepo);
+  ProfileController(this._authRepo, this._feedRepo, this._shortRepo, this._saveRepo, this._followRepo);
 
   final _picker = ImagePicker();
 
@@ -71,16 +74,20 @@ class ProfileController extends GetxController {
   Future<void> _loadContent() async {
     isContentLoading(true);
 
-    // Fetch posts, shorts, liked, and saved concurrently
-    final postsF  = _feedRepo.getUserPosts(_userId!);
-    final shortsF = _shortRepo.getByUser(_userId!);
-    final likedF  = _feedRepo.getLikedPosts(_userId!);
-    final savedF  = _saveRepo.getSavedByUser(_userId!);
+    // Fetch posts, shorts, liked, saved, followers, and following concurrently
+    final postsF      = _feedRepo.getUserPosts(_userId!);
+    final shortsF     = _shortRepo.getByUser(_userId!);
+    final likedF      = _feedRepo.getLikedPosts(_userId!);
+    final savedF      = _saveRepo.getSavedByUser(_userId!);
+    final followersF  = _followRepo.getFollowers(_userId!);
+    final followingF  = _followRepo.getFollowing(_userId!);
 
-    final postsRes  = await postsF;
-    final shortsRes = await shortsF;
-    final likedRes  = await likedF;
-    final savedRes  = await savedF;
+    final postsRes     = await postsF;
+    final shortsRes    = await shortsF;
+    final likedRes     = await likedF;
+    final savedRes     = await savedF;
+    final followersRes = await followersF;
+    final followingRes = await followingF;
 
     if (postsRes.success && postsRes.data != null) {
       myPosts.assignAll(postsRes.data!);
@@ -105,6 +112,13 @@ class ProfileController extends GetxController {
           .map((r) => r.data!)
           .toList();
       savedPosts.assignAll(posts);
+    }
+
+    if (followersRes.success && followersRes.data != null) {
+      followersCount(followersRes.data!.length);
+    }
+    if (followingRes.success && followingRes.data != null) {
+      followingCount(followingRes.data!.length);
     }
 
     isContentLoading(false);
@@ -181,6 +195,21 @@ class ProfileController extends GetxController {
       pickedImagePath(picked.path);
       profilePic(picked.path); // preview locally
     }
+  }
+
+  void shareProfile() {
+    final handle = username.value.isNotEmpty ? username.value : _userId ?? '';
+    final profileUrl = 'https://social-media-uav6.onrender.com/profile/$handle';
+    Clipboard.setData(ClipboardData(text: profileUrl));
+    Get.snackbar(
+      'Link copied!',
+      profileUrl,
+      snackPosition: SnackPosition.BOTTOM,
+      duration: const Duration(seconds: 3),
+      backgroundColor: Colors.black87,
+      colorText: Colors.white,
+      margin: const EdgeInsets.all(12),
+    );
   }
 
   Future<void> logout() async {

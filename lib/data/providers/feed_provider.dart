@@ -36,11 +36,14 @@ class FeedProvider {
   }
 
   Future<Response<dynamic>> savePost(String postId) {
-    return _dio.post('${ApiEndpoints.posts}/$postId/save');
+    return _dio.post(ApiEndpoints.save, data: {
+      'contentId': postId,
+      'contentType': 'feed',
+    });
   }
 
   Future<Response<dynamic>> unsavePost(String postId) {
-    return _dio.delete('${ApiEndpoints.posts}/$postId/save');
+    return _dio.delete('${ApiEndpoints.save}/$postId');
   }
 
   Future<Response<dynamic>> getUserPosts(String userId, {int page = 1, int limit = 12}) =>

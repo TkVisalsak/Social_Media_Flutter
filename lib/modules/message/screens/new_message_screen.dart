@@ -54,6 +54,10 @@ class _NewMessageScreenState extends State<NewMessageScreen> {
     final res  = await repo.getOrCreateDm(u.id);
     if (!mounted) return;
     if (res.success && res.data != null) {
+      // Refresh conversation list so the new DM appears in DirectView.
+      if (Get.isRegistered<DirectController>()) {
+        Get.find<DirectController>().fetchConversations(refresh: true);
+      }
       Navigator.pop(context);
       Get.toNamed(AppRoutes.CHAT, arguments: res.data);
     } else {

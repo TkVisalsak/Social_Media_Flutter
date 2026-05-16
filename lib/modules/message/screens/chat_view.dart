@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../controllers/chat_view_controller.dart';
 import '../controllers/message_controller.dart';
@@ -192,7 +193,16 @@ class ChatView extends StatelessWidget {
                         color: Color(0xFF3797F0), shape: BoxShape.circle),
                     child: IconButton(
                       icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      onPressed: () {},
+                      onPressed: () async {
+                        final picker = ImagePicker();
+                        final picked = await picker.pickImage(
+                          source: ImageSource.camera,
+                          imageQuality: 80,
+                        );
+                        if (picked != null) {
+                          ctrl.sendImageFile(picked.path);
+                        }
+                      },
                     ),
                   ),
                   Expanded(

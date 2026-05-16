@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/short_model.dart';
+import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/short_repository.dart';
 import '../controllers/shorts_controller.dart';
 import '../widgets/reel_item.dart';
@@ -54,7 +55,10 @@ class _UserShortsPlayerState extends State<UserShortsPlayer> {
       ctrl.isTabVisible(true);
     } else {
       // No global controller — create a temporary one.
-      Get.put(ShortsController(Get.find<ShortRepository>()));
+      Get.put(ShortsController(
+        Get.find<ShortRepository>(),
+        Get.find<FollowRepository>(),
+      ));
       _createdTempCtrl = true;
       final ctrl = Get.find<ShortsController>();
       ctrl.shorts.assignAll(widget.shorts);

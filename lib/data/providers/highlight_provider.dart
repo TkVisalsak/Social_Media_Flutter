@@ -5,8 +5,28 @@ class HighlightProvider {
   final Dio _dio;
 
   Future<Response<dynamic>> getMyHighlights() => _dio.get('/highlights');
-  Future<Response<dynamic>> create(String title, List<String> storyIds, {String? coverUrl}) =>
-      _dio.post('/highlights', data: {'title': title, 'storyIds': storyIds, if (coverUrl != null) 'coverUrl': coverUrl});
+
+  Future<Response<dynamic>> create(
+    String title,
+    List<String> storyIds, {
+    String? coverUrl,
+    String? coverImagePath,
+  }) async {
+    if (coverImagePath != null) {
+      final form = FormData.fromMap({
+        'title': title,
+        'storyIds': storyIds,
+        'cover': await MultipartFile.fromFile(coverImagePath),
+      });
+      return _dio.post('/highlights', data: form);
+    }
+    return _dio.post('/highlights', data: {
+      'title': title,
+      'storyIds': storyIds,
+      if (coverUrl != null) 'coverUrl': coverUrl,
+    });
+  }
+
   Future<Response<dynamic>> update(String id, {String? title, List<String>? storyIds}) =>
       _dio.put('/highlights/$id', data: {
         if (title != null) 'title': title,

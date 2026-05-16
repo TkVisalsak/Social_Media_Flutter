@@ -24,6 +24,7 @@ class PostModel {
   final int       likesCount;
   final int       commentsCount;
   final int       sharesCount;
+  final int       repostsCount;
   final bool      isLiked;
   final bool      isSaved;
   final String visibility; // ✅ added — backend has this
@@ -40,6 +41,7 @@ class PostModel {
     this.likesCount    = 0,
     this.commentsCount = 0,
     this.sharesCount   = 0,
+    this.repostsCount  = 0,
     this.isLiked       = false,
     this.isSaved       = false,
     this.visibility    = 'public',
@@ -74,6 +76,7 @@ class PostModel {
       likesCount: JsonUtils.toInt(j['likesCount']),
       commentsCount: JsonUtils.toInt(j['commentsCount']),
       sharesCount: JsonUtils.toInt(j['sharesCount']),
+      repostsCount: JsonUtils.toInt(j['repostsCount']),
       isLiked: JsonUtils.toBool(j['isLiked']),
       isSaved: JsonUtils.toBool(j['isSaved']),
       visibility: j['visibility'] ?? 'public',
@@ -93,6 +96,7 @@ class PostModel {
       'likesCount':    likesCount,
       'commentsCount': commentsCount,
       'sharesCount':   sharesCount,
+      'repostsCount':  repostsCount,
       'isLiked':       isLiked,
       'isSaved':       isSaved,
       'visibility':    visibility,
@@ -112,6 +116,7 @@ class PostModel {
     int?       likesCount,
     int?       commentsCount,
     int?       sharesCount,
+    int?       repostsCount,
     bool?      isLiked,
     bool?      isSaved,
     String?    visibility,
@@ -128,6 +133,7 @@ class PostModel {
       likesCount:    likesCount    ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       sharesCount:   sharesCount   ?? this.sharesCount,
+      repostsCount:  repostsCount  ?? this.repostsCount,
       isLiked:       isLiked       ?? this.isLiked,
       isSaved:       isSaved       ?? this.isSaved,
       visibility:    visibility    ?? this.visibility,

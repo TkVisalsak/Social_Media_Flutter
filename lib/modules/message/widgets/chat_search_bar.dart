@@ -6,6 +6,7 @@ class ChatSearchBar extends StatelessWidget {
   final bool                  isActive;
   final VoidCallback          onTap;
   final VoidCallback          onCancel;
+  final ValueChanged<String>? onChanged;
 
   const ChatSearchBar({
     super.key,
@@ -14,6 +15,7 @@ class ChatSearchBar extends StatelessWidget {
     required this.isActive,
     required this.onTap,
     required this.onCancel,
+    this.onChanged,
   });
 
   @override
@@ -39,6 +41,7 @@ class ChatSearchBar extends StatelessWidget {
                       controller: controller,
                       focusNode: focusNode,
                       onTap: onTap,
+                      onChanged: onChanged,
                       style: const TextStyle(color: Colors.black, fontSize: 15),
                       decoration: const InputDecoration(
                         isCollapsed: true,

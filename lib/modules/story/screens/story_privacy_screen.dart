@@ -12,7 +12,7 @@ class _StoryPrivacyScreenState
     extends State<StoryPrivacyScreen> {
 
   String selectedPrivacy =
-      "Close Friends";
+      "public";
 
   bool storyArchive = true;
 
@@ -127,7 +127,7 @@ class _StoryPrivacyScreenState
                     subtitle:
                     "Anyone can view your story",
 
-                    value: "Public",
+                    value: "public",
                   ),
 
                   const SizedBox(height: 10),
@@ -142,7 +142,7 @@ class _StoryPrivacyScreenState
                     subtitle:
                     "Only your friends can view",
 
-                    value: "Friends",
+                    value: "friends",
                   ),
 
                   const SizedBox(height: 10),
@@ -157,7 +157,7 @@ class _StoryPrivacyScreenState
                     subtitle:
                     "Selected people only",
 
-                    value: "Close Friends",
+                    value: "private",
                   ),
 
                   const SizedBox(height: 10),
@@ -172,7 +172,7 @@ class _StoryPrivacyScreenState
                     subtitle:
                     "Choose specific people",
 
-                    value: "Custom",
+                    value: "followers",
                   ),
 
                   const SizedBox(height: 18),
@@ -379,7 +379,7 @@ class _StoryPrivacyScreenState
                         // match the backend visibility enum).
                         Navigator.pop(
                           context,
-                          selectedPrivacy.toLowerCase(),
+                          selectedPrivacy,
                         );
                       },
 

@@ -40,7 +40,7 @@ class MessageProvider {
   }) =>
       _dio.post(ApiEndpoints.conversationGroup, data: {
         'name': name,
-        'members': memberIds,
+        'participants': memberIds,
         if (avatar != null) 'avatar': avatar,
       });
 

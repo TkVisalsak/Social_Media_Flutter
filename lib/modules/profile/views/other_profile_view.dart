@@ -38,7 +38,10 @@ class OtherProfileView extends GetView<OtherProfileController> {
                     style: const TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 20)),
                 actions: [
-                  IconButton(icon: const Icon(Icons.more_horiz), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(Icons.more_horiz),
+                    onPressed: () => _showProfileOptions(context),
+                  ),
                 ],
               ),
 
@@ -174,6 +177,47 @@ class OtherProfileView extends GetView<OtherProfileController> {
     if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
     if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
     return '$n';
+  }
+
+  static void _showProfileOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.flag_rounded),
+              title: const Text('Report'),
+              onTap: () {
+                Navigator.pop(context);
+                Get.snackbar('Reported', 'Thanks for letting us know.',
+                    snackPosition: SnackPosition.BOTTOM,
+                    duration: const Duration(seconds: 2));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block_rounded),
+              title: const Text('Block user'),
+              onTap: () => Navigator.pop(context),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -403,6 +447,13 @@ class _RepostTile extends StatelessWidget {
             : '${diff.inMinutes}m ago';
 
     return ListTile(
+      onTap: () {
+        if (!isShort) {
+          Get.toNamed(AppRoutes.POST_DETAIL,
+              arguments: {'id': repost.contentId});
+        }
+        // Short reposts: no dedicated detail page yet — silently no-op
+      },
       leading: Container(
         width: 40,
         height: 40,

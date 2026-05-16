@@ -19,7 +19,8 @@ class DirectController extends GetxController {
   final myUserId       = RxnString();
   final onlineUserIds  = <String>{}.obs;
 
-  StreamSubscription<List<String>>? _onlineSub;
+  StreamSubscription<List<String>>?           _onlineSub;
+  StreamSubscription<Map<String, dynamic>>?   _msgSub;
 
   @override
   void onInit() {
@@ -29,6 +30,17 @@ class DirectController extends GetxController {
     _onlineSub = _socket.onlineUsersStream.listen(
       (ids) => onlineUserIds.assignAll(ids),
     );
+    // Refresh conversation list when a new message arrives for a conversation
+    // that may not be in the list yet (e.g. after creating a new DM).
+    _msgSub = _socket.messageStream.listen(_onSocketMessage);
+  }
+
+  void _onSocketMessage(Map<String, dynamic> raw) {
+    final convId = (raw['conversationId'] ?? raw['conversation_id'])?.toString();
+    if (convId == null) return;
+    // Refresh the list so the latest message preview and ordering are correct,
+    // and so any brand-new conversation (e.g. after a first DM) appears.
+    fetchConversations(refresh: true);
   }
 
   Future<void> _loadMe() async {
@@ -37,7 +49,7 @@ class DirectController extends GetxController {
   }
 
   Future<void> fetchConversations({bool refresh = false}) async {
-    if (isLoading.value) return;
+    if (isLoading.value && !refresh) return;
     isLoading(true);
     error(null);
     final res = await _repo.getConversations();
@@ -95,6 +107,7 @@ class DirectController extends GetxController {
   @override
   void onClose() {
     _onlineSub?.cancel();
+    _msgSub?.cancel();
     super.onClose();
   }
 }

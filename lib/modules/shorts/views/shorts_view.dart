@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../controllers/shorts_controller.dart';
+import '../screens/create_short_screen.dart';
 import '../widgets/reel_item.dart';
 
 class ShortsView extends GetView<ShortsController> {
@@ -76,18 +78,52 @@ class _ReelPageViewState extends State<_ReelPageView> {
 class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<ShortsController>();
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            const Icon(Icons.add_box_outlined, color: Colors.white, size: 28),
+            // ── Plus / Create button ──────────────────────────
+            GestureDetector(
+              onTap: () {
+                controller.isTabVisible(false);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const CreateShortScreen(),
+                  ),
+                ).whenComplete(() => controller.isTabVisible(true));
+              },
+              child: const Icon(Icons.add_box_outlined, color: Colors.white, size: 28),
+            ),
             const Spacer(),
-            _TabBtn(label: 'For You',  selected: true,  onTap: () {}),
-            const SizedBox(width: 20),
-            _TabBtn(label: 'Friends',  selected: false, onTap: () {}),
+            // ── FYP / Friends tab toggle (reactive) ───────────
+            Obx(() {
+              final feed = controller.selectedFeed.value;
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _TabBtn(
+                    label:    'For You',
+                    selected: feed == 'fyp',
+                    onTap:    () => controller.switchFeed('fyp'),
+                  ),
+                  const SizedBox(width: 20),
+                  _TabBtn(
+                    label:    'Friends',
+                    selected: feed == 'friends',
+                    onTap:    () => controller.switchFeed('friends'),
+                  ),
+                ],
+              );
+            }),
             const Spacer(),
-            const Icon(Icons.search_rounded, color: Colors.white, size: 26),
+            // ── Search button ─────────────────────────────────
+            GestureDetector(
+              onTap: () => Get.toNamed(AppRoutes.SEARCH),
+              child: const Icon(Icons.search_rounded, color: Colors.white, size: 26),
+            ),
           ],
         ),
       ),

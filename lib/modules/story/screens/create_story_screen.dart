@@ -58,15 +58,15 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
 
   String get _visibilityLabel => switch (_visibility) {
         'friends'   => 'Friends',
-        'private'   => 'Only me',
-        'followers' => 'Followers',
+        'private'   => 'Close Friends',
+        'followers' => 'Custom',
         _           => 'Public',
       };
 
   IconData get _visibilityIcon => switch (_visibility) {
         'friends'   => Icons.people_rounded,
-        'private'   => Icons.lock_rounded,
-        'followers' => Icons.person_rounded,
+        'private'   => Icons.favorite_border_rounded,
+        'followers' => Icons.person_outline_rounded,
         _           => Icons.public_rounded,
       };
 
