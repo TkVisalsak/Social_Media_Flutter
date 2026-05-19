@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../data/models/user_model.dart';
+import '../../../shared/widgets/social_action_buttons.dart';
 import '../controllers/friend_suggestions_controller.dart';
 
 class FriendSuggestionsScreen extends GetView<FriendSuggestionsController> {
@@ -200,27 +201,41 @@ class _NotFollowingBackList extends StatelessWidget {
   }
 }
 
-class _FollowBackRow extends StatelessWidget {
+class _FollowBackRow extends StatefulWidget {
   final UserModel user;
   final VoidCallback onFollow;
   const _FollowBackRow({required this.user, required this.onFollow});
 
   @override
+  State<_FollowBackRow> createState() => _FollowBackRowState();
+}
+
+class _FollowBackRowState extends State<_FollowBackRow> {
+  bool _followed = false;
+
+  void _handleFollow(bool following) {
+    if (following && !_followed) {
+      setState(() => _followed = true);
+      widget.onFollow();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final name = user.fullName ?? user.username ?? 'Unknown';
+    final name = widget.user.fullName ?? widget.user.username ?? 'Unknown';
     return GestureDetector(
-      onTap: () => Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: user),
+      onTap: () => Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: widget.user),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundImage: user.profilePic != null && user.profilePic!.isNotEmpty
-                  ? NetworkImage(user.profilePic!)
+              backgroundImage: widget.user.profilePic != null && widget.user.profilePic!.isNotEmpty
+                  ? NetworkImage(widget.user.profilePic!)
                   : null,
               backgroundColor: Colors.grey[200],
-              child: user.profilePic == null || user.profilePic!.isEmpty
+              child: widget.user.profilePic == null || widget.user.profilePic!.isEmpty
                   ? const Icon(Icons.person, size: 24, color: Colors.grey)
                   : null,
             ),
@@ -248,18 +263,14 @@ class _FollowBackRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            OutlinedButton(
-              onPressed: onFollow,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black87,
-                side: const BorderSide(color: Colors.black26),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            SizedBox(
+              height: 36,
+              child: FollowButton(
+                isFollowing: _followed,
+                onTap: _handleFollow,
+                followLabel: 'Follow back',
+                followingLabel: 'Following',
               ),
-              child: const Text('Follow back'),
             ),
           ],
         ),

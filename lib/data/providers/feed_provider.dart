@@ -58,7 +58,7 @@ class FeedProvider {
 
   Future<Response<dynamic>> createPost({
     String? caption,
-    String? filePath,
+    List<String> filePaths = const [],
     String visibility = 'public',
     String? location,
   }) async {
@@ -66,8 +66,10 @@ class FeedProvider {
       if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
       'visibility': visibility,
       if (location != null && location.isNotEmpty) 'location': location,
-      if (filePath != null) 'file': await MultipartFile.fromFile(filePath),
     });
+    for (final path in filePaths) {
+      form.files.add(MapEntry('file', await MultipartFile.fromFile(path)));
+    }
     return _dio.post(ApiEndpoints.feeds, data: form);
   }
 }

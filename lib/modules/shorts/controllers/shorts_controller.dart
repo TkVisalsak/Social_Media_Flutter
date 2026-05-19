@@ -7,9 +7,10 @@ import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/short_repository.dart';
 
 class ShortsController extends GetxController {
-  ShortsController(this._repo, this._followRepo);
+  ShortsController(this._repo, this._followRepo, {this.skipInitialFetch = false});
   final ShortRepository  _repo;
   final FollowRepository _followRepo;
+  final bool skipInitialFetch;
 
   final shorts       = <ShortModel>[].obs;
   final isLoading    = false.obs;
@@ -19,16 +20,21 @@ class ShortsController extends GetxController {
   /// 'fyp' or 'friends'
   final selectedFeed = 'fyp'.obs;
 
+  // Follow status cache — avoids redundant API calls for the same user
+  final _followCache = <String, bool>{};
+
   @override
   void onInit() {
     super.onInit();
-    fetchShorts();
+    if (!skipInitialFetch) fetchShorts();
   }
 
   Future<void> fetchShorts() async {
     isLoading.value = true;
     error.value     = null;
-    final res = await _repo.getAllShorts();
+    final res = selectedFeed.value == 'friends'
+        ? await _repo.getFriendsShorts()
+        : await _repo.getAllShorts();
     if (res.success && res.data != null) {
       shorts.assignAll(res.data!);
     } else {
@@ -97,9 +103,32 @@ class ShortsController extends GetxController {
     await _repo.toggleLike(shortId);
   }
 
-  /// Follow a user by userId. Calls the follow API and returns success.
+  /// Returns follow status for userId, using cache if available.
+  Future<bool> getFollowStatus(String userId) async {
+    if (_followCache.containsKey(userId)) return _followCache[userId]!;
+    final res = await _followRepo.isFollowing(userId);
+    final value = res.success ? (res.data ?? false) : false;
+    _followCache[userId] = value;
+    return value;
+  }
+
+  /// Follow user and update cache.
   Future<bool> followUser(String userId) async {
     final res = await _followRepo.follow(userId);
+    if (res.success) _followCache[userId] = true;
     return res.success;
+  }
+
+  /// Unfollow user and update cache.
+  Future<bool> unfollowUser(String userId) async {
+    final res = await _followRepo.unfollow(userId);
+    if (res.success) _followCache[userId] = false;
+    return res.success;
+  }
+
+  /// Optimistically removes the short from the list and deletes it via API.
+  Future<void> deleteShort(String id) async {
+    shorts.removeWhere((s) => s.id == id);
+    await _repo.deleteShort(id);
   }
 }

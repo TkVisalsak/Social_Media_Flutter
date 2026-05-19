@@ -8,6 +8,9 @@ class ShortProvider {
 
   Future<Response<dynamic>> getAll() => _dio.get(ApiEndpoints.shortsAll);
 
+  Future<Response<dynamic>> getFriendsShorts() =>
+      _dio.get(ApiEndpoints.friendsShorts);
+
   Future<Response<dynamic>> upload({
     required String filePath,
     String? caption,
@@ -51,4 +54,7 @@ class ShortProvider {
 
   Future<Response<dynamic>> getByUser(String userId) =>
       _dio.get('${ApiEndpoints.shortsByUser}/$userId');
+
+  Future<Response<dynamic>> deleteShort(String id) =>
+      _dio.delete('${ApiEndpoints.shortsVideo}/$id');
 }

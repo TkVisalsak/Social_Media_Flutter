@@ -1,152 +1,4 @@
-## story section
-- create story
-- get story
-- view story 
-- - a view is counted once per user per story and rewatch does not increase the count
-- - show viewer list (viewer list)(interaction list)
-- react story
-- story reply-> create to chat append
-- share story (to friend or link)
-
-## feed section
-- create post
-- upload multiple media (type video||image)
-- get post or feed
-- comment/reply feed
-- react feed
-- share feed
-- repost
-- save
-
-## short section
-- split to public and friend
-- create short
-- like
-- comment/reply
-- repost
-- share
-- on click profile load user profile
-
-## chat message
-- friend story
-- create group
-- 1 to 1 chat
-- group chat
-- suggest friendd
-
-## profile user
-- create post/story/short
-- edit profile
-- user following/follower
-- slice 3 page under profile
-- - user post
-- - user repost
-- - user save log
-- - user tag log
-
-## notification
-- alert when like
-- follow
-- message
-- comment/reply
-
-## user
-
-
-implement the animation to short or reel too same as follow
-also fix the spacing between button
-add repost to short
 import 'package:flutter/material.dart';
-
-void main() => runApp(const CreateDemoApp());
-
-class CreateDemoApp extends StatelessWidget {
-  const CreateDemoApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Create Button Demo',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1D9BF0),
-          brightness: Brightness.dark,
-        ),
-      ),
-      home: const DemoScreen(),
-    );
-  }
-}
-
-class DemoScreen extends StatelessWidget {
-  const DemoScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Feed')),
-      body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        itemCount: 12,
-        itemBuilder: (context, i) {
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(child: Text('${i + 1}')),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Post ${i + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Tap the + button to see the menu pop up.',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-      floatingActionButton: CreateFab(
-        items: [
-          CreateMenuItem(
-            icon: Icons.image_outlined,
-            label: 'New post',
-            onTap: () => debugPrint('New post'),
-          ),
-          CreateMenuItem(
-            icon: Icons.videocam_outlined,
-            label: 'Go live',
-            onTap: () => debugPrint('Go live'),
-          ),
-          CreateMenuItem(
-            icon: Icons.mic_outlined,
-            label: 'Voice note',
-            onTap: () => debugPrint('Voice note'),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class CreateMenuItem {
   const CreateMenuItem({
@@ -161,16 +13,6 @@ class CreateMenuItem {
 
 /// A floating "+" button that rotates to an X and pops a menu sheet
 /// above it. Each menu item slides in with a staggered delay.
-///
-/// Usage:
-/// ```dart
-/// floatingActionButton: CreateFab(
-///   items: [
-///     CreateMenuItem(icon: ..., label: ..., onTap: ...),
-///     ...
-///   ],
-/// )
-/// ```
 class CreateFab extends StatefulWidget {
   const CreateFab({
     super.key,
@@ -253,7 +95,6 @@ class _CreateFabState extends State<CreateFab>
         // Tap-outside scrim to dismiss. Only catches hits while open.
         if (_isOpen)
           Positioned(
-            // Big enough to cover the screen above the FAB.
             left: -2000,
             right: -2000,
             top: -2000,
@@ -331,19 +172,17 @@ class _MenuSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Material(
       color: Colors.transparent,
       child: Container(
         width: width,
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerHigh,
-          border: Border.all(color: scheme.outlineVariant, width: 0.5),
+          color: Colors.white,
+          border: Border.all(color: Colors.grey.shade200, width: 0.5),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.25),
+              color: Colors.black.withValues(alpha: 0.15),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -385,7 +224,6 @@ class _StaggeredItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Each row enters slightly later than the last.
     final start = 0.25 + (index * 0.08);
     final end = (start + 0.45).clamp(0.0, 1.0);
     final anim = CurvedAnimation(
@@ -417,7 +255,6 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(10),
@@ -425,13 +262,14 @@ class _MenuRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
           children: [
-            Icon(item.icon, size: 20, color: scheme.onSurfaceVariant),
+            Icon(item.icon, size: 20, color: Colors.black87),
             const SizedBox(width: 12),
             Text(
               item.label,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
+                color: Colors.black87,
               ),
             ),
           ],
@@ -439,45 +277,4 @@ class _MenuRow extends StatelessWidget {
       ),
     );
   }
-}implement to create in feed
-
-- the like/comment/repost/share count broke again
-- when select on my post in profile load a page like in instagram not just a comment-appliead to short/save/repost/like too in profile page
-- follow button in short doesnt work
-- make friend section for reel too where only friend or following(where the arthur is public aplied for those who following the arthur and the arthur didnt follow back) video is displayed
-- also in profile the saved post/like/short dont displat correctly it dont show the picture only defualt card
-use 5 agent 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-- the short interact have too much unnesseceery padding
-- for reel why their a follow button despite being their own video
-- add delete reel for user who own the video
-- friennd button at feed in between create and notification
-- in short if user click on their own profile redirect them to their own profile page no need to make it complicated
-- the save feature dont work keep trowing 500
-- the like comment repost count dont work 1
-- feed create i change required photo 
-- make me able to tag add feeling and check in
-- connect create feed privacy selection work
-- applied the crreate button to user profile page too
-- in reel when i togglr to friend section make me able to toggle back or duplicate the reel fyp ui if need
-- despite selecting 2 user to create group it said requie 2 user
-- fix all ui in post some have cross on letter
-- get user profile for story or at create story 
-- mark that story if it my story
-- if story been watch mark it gray and push to the right
-- create group is only allow to invite friend
-- get user profile for chat
+}

@@ -5,7 +5,12 @@ import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/models/repost_model.dart';
 import '../../../data/models/short_model.dart';
+import '../../../data/providers/local_storage.dart';
+import '../../../data/repositories/repost_repository.dart';
+import '../../../shared/widgets/social_action_buttons.dart';
 import '../controllers/shorts_controller.dart';
 import 'reel_comments_sheet.dart';
 import 'reel_share_sheet.dart';
@@ -26,9 +31,14 @@ class ReelItem extends StatefulWidget {
 
 class _ReelItemState extends State<ReelItem> {
   VideoPlayerController? _ctrl;
-  bool       _showHeart   = false;
-  final _isFollowing      = false.obs;
+  bool       _showHeart     = false;
+  final _isFollowing        = false.obs;
   bool       _followLoading = false;
+  bool       _isReposted    = false;
+  String?    _repostId;
+  bool       _repostLoading = false;
+  int        _repostCount   = 0;
+  bool       _isOwnVideo    = false;
   Timer?  _tapTimer;
   Worker? _visibilityWorker;
 
@@ -49,6 +59,8 @@ class _ReelItemState extends State<ReelItem> {
         }
       },
     );
+    _loadFollowStatus();
+    _detectOwnVideo();
   }
 
   void _initVideo() {
@@ -130,6 +142,47 @@ class _ReelItemState extends State<ReelItem> {
     Get.find<ShortsController>().toggleLike(widget.short.id);
   }
 
+  void _toggleRepost() => _doToggleRepost();
+
+  Future<void> _doToggleRepost() async {
+    if (_repostLoading) return;
+    setState(() => _repostLoading = true);
+
+    if (_isReposted) {
+      if (_repostId != null) {
+        final res = await Get.find<RepostRepository>().deleteRepost(_repostId!);
+        if (res.success) {
+          setState(() {
+            _isReposted = false;
+            _repostId   = null;
+            _repostCount = (_repostCount - 1).clamp(0, 999999);
+          });
+        }
+      }
+    } else {
+      final res = await Get.find<RepostRepository>().repost(
+        contentId: widget.short.id,
+        contentType: RepostContentType.short,
+      );
+      if (res.success && res.data != null) {
+        setState(() {
+          _isReposted  = true;
+          _repostId    = res.data!.id;
+          _repostCount = _repostCount + 1;
+        });
+      } else {
+        final err = res.error ?? '';
+        if (err.toLowerCase().contains('already')) {
+          setState(() => _isReposted = true);
+        } else if (err.isNotEmpty) {
+          Get.snackbar('Repost failed', err, snackPosition: SnackPosition.BOTTOM);
+        }
+      }
+    }
+
+    setState(() => _repostLoading = false);
+  }
+
   void _openComments() {
     _ctrl?.pause();
     showModalBottomSheet(
@@ -176,6 +229,32 @@ class _ReelItemState extends State<ReelItem> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
+            if (_isOwnVideo) ...[
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('Delete reel', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Delete Reel?'),
+                      content: const Text('This cannot be undone.'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await Get.find<ShortsController>().deleteShort(widget.short.id);
+                  }
+                },
+              ),
+            ],
             ListTile(
               leading: const Icon(Icons.not_interested_rounded),
               title: const Text('Not Interested'),
@@ -208,28 +287,42 @@ class _ReelItemState extends State<ReelItem> {
     ).whenComplete(_resumeIfActive);
   }
 
+  Future<void> _detectOwnVideo() async {
+    final me = await LocalStorage.user;
+    if (mounted) setState(() => _isOwnVideo = me?.id == widget.short.user.id);
+  }
+
+  Future<void> _loadFollowStatus() async {
+    final userId = widget.short.user.id;
+    if (userId.isEmpty) return;
+    final ctrl = Get.find<ShortsController>();
+    final following = await ctrl.getFollowStatus(userId);
+    if (mounted) _isFollowing.value = following;
+  }
+
   Future<void> _toggleFollow() async {
     if (_followLoading) return;
     final userId = widget.short.user.id;
     if (userId.isEmpty) return;
-    _followLoading = true;
+    setState(() => _followLoading = true);
     final wasFollowing = _isFollowing.value;
     _isFollowing.value = !wasFollowing;
     final ctrl = Get.find<ShortsController>();
     final ok = wasFollowing
-        ? true // unfollow not exposed here — just optimistic
+        ? await ctrl.unfollowUser(userId)
         : await ctrl.followUser(userId);
-    if (!ok) {
-      _isFollowing.value = wasFollowing; // revert on failure
-    }
-    _followLoading = false;
+    if (!ok) _isFollowing.value = wasFollowing;
+    setState(() => _followLoading = false);
   }
 
   void _openProfile() {
     _ctrl?.pause();
-    final user = widget.short.user;
-    Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: user)
-        ?.whenComplete(_resumeIfActive);
+    if (_isOwnVideo) {
+      Get.until((route) => route.isFirst);
+    } else {
+      Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: widget.short.user)
+          ?.whenComplete(_resumeIfActive);
+    }
   }
 
   void _resumeIfActive() {
@@ -332,37 +425,66 @@ class _ReelItemState extends State<ReelItem> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 8),
 
-                  // ── Like button (reactive via Obx) ───────────
+                  // ── Like button ───────────────────────────────
+                  Obx(() {
+                    final ctrl = Get.find<ShortsController>();
+                    final idx  = ctrl.shorts.indexWhere((s) => s.id == widget.short.id);
+                    final s    = idx >= 0 ? ctrl.shorts[idx] : widget.short;
+                    return LikeButton(
+                      isLiked: s.isLiked,
+                      likeCount: s.likeCount,
+                      onTap: (_) => _toggleLike(),
+                      size: 26,
+                      likedColor: const Color(0xFFFF4D6D),
+                      unlikedColor: Colors.white,
+                      axis: Axis.vertical,
+                    );
+                  }),
+                  const SizedBox(height: 8),
+
+                  // ── Comment button ────────────────────────────
                   Obx(() {
                     final ctrl = Get.find<ShortsController>();
                     final idx  = ctrl.shorts.indexWhere((s) => s.id == widget.short.id);
                     final s    = idx >= 0 ? ctrl.shorts[idx] : widget.short;
                     return _ActionBtn(
-                      icon:    s.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      label:   _fmt(s.likeCount),
-                      color:   s.isLiked ? const Color(0xFFFF4D6D) : Colors.white,
-                      onTap:   _toggleLike,
-                      animate: s.isLiked,
+                      icon:  Icons.chat_bubble_rounded,
+                      label: _fmt(s.commentCount),
+                      onTap: _openComments,
                     );
                   }),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
 
-                  _ActionBtn(
-                    icon:  Icons.chat_bubble_rounded,
-                    label: _fmt(widget.short.commentCount),
-                    onTap: _openComments,
+                  // ── Repost button ─────────────────────────────
+                  IgnorePointer(
+                    ignoring: _repostLoading,
+                    child: RepostButton(
+                      isReposted: _isReposted,
+                      repostCount: _repostCount,
+                      onTap: (_) => _toggleRepost(),
+                      size: 26,
+                      repostedColor: AppColors.repost,
+                      unrepostedColor: Colors.white,
+                      axis: Axis.vertical,
+                    ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
 
-                  _ActionBtn(
-                    icon:    Icons.reply_rounded,
-                    label:   _fmt(widget.short.shareCount),
-                    onTap:   _openShare,
-                    mirrorX: true,
-                  ),
-                  const SizedBox(height: 20),
+                  // ── Share button ──────────────────────────────
+                  Obx(() {
+                    final ctrl = Get.find<ShortsController>();
+                    final idx  = ctrl.shorts.indexWhere((s) => s.id == widget.short.id);
+                    final s    = idx >= 0 ? ctrl.shorts[idx] : widget.short;
+                    return _ActionBtn(
+                      icon:    Icons.reply_rounded,
+                      label:   _fmt(s.shareCount),
+                      onTap:   _openShare,
+                      mirrorX: true,
+                    );
+                  }),
+                  const SizedBox(height: 8),
 
                   _ActionBtn(icon: Icons.more_horiz_rounded, label: '', onTap: _openMore),
                 ],
@@ -403,31 +525,22 @@ class _ReelItemState extends State<ReelItem> {
                                 fontWeight: FontWeight.w700,
                                 fontSize: 15)),
                       ),
-                      const SizedBox(width: 10),
-                      Obx(() {
-                        final following = _isFollowing.value;
-                        return GestureDetector(
-                          onTap: _toggleFollow,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: following
-                                  ? Colors.white.withValues(alpha: 0.25)
-                                  : Colors.transparent,
-                              border: Border.all(color: Colors.white),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              following ? 'Following' : 'Follow',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600),
-                            ),
+                      if (!_isOwnVideo) ...[
+                        const SizedBox(width: 8),
+                        Obx(() => IgnorePointer(
+                          ignoring: _followLoading,
+                          child: FollowButton(
+                            isFollowing: _isFollowing.value,
+                            onTap: (_) => _toggleFollow(),
+                            brandColor: Colors.transparent,
+                            unfollowedBorderColor: Colors.white,
+                            followedBgColor: Colors.white.withValues(alpha: 0.25),
+                            followedFgColor: Colors.white,
+                            followedBorderColor: Colors.white,
+                            height: 30,
                           ),
-                        );
-                      }),
+                        )),
+                      ],
                     ],
                   ),
                   if (widget.short.caption != null &&
@@ -473,27 +586,19 @@ class _ReelItemState extends State<ReelItem> {
 class _ActionBtn extends StatelessWidget {
   final IconData     icon;
   final String       label;
-  final Color        color;
   final VoidCallback onTap;
-  final bool         animate;
   final bool         mirrorX;
 
   const _ActionBtn({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color   = Colors.white,
-    this.animate = false,
     this.mirrorX = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    Widget ico = AnimatedScale(
-      duration: const Duration(milliseconds: 200),
-      scale: animate ? 1.25 : 1.0,
-      child: Icon(icon, color: color, size: 30),
-    );
+    Widget ico = Icon(icon, color: Colors.white, size: 30);
     if (mirrorX) ico = Transform.scale(scaleX: -1, child: ico);
     return GestureDetector(
       onTap: onTap,

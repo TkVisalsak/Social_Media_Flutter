@@ -9,6 +9,7 @@ import 'repo_helpers.dart';
 
 abstract class ShortRepository {
   Future<ApiResponse<List<ShortModel>>> getAllShorts();
+  Future<ApiResponse<List<ShortModel>>> getFriendsShorts();
   Future<ApiResponse<List<ShortModel>>> getByUser(String userId);
   Future<ApiResponse<ShortModel>> uploadShort({
     required String filePath,
@@ -26,6 +27,7 @@ abstract class ShortRepository {
   Future<ApiResponse<CommentModel>> reply(String commentId,
       {required String text});
   Future<ApiResponse<void>> deleteComment(String commentId);
+  Future<ApiResponse<void>> deleteShort(String id);
 }
 
 class ShortRepositoryImpl implements ShortRepository {
@@ -51,6 +53,28 @@ class ShortRepositoryImpl implements ShortRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load shorts'));
     } catch (e) {
       return ApiResponse.failure('Shorts parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<ShortModel>>> getFriendsShorts() async {
+    try {
+      final res = await _provider.getFriendsShorts();
+      final list =
+          RepoHelpers.extractList(res.data, keys: ['videos', 'shorts', 'data']);
+      final shorts = list
+          .map((e) => RepoHelpers.asMap(e))
+          .whereType<Map<String, dynamic>>()
+          .map(ShortModel.fromJson)
+          .toList();
+      return ApiResponse.success(shorts);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load friends shorts'));
+    } catch (e) {
+      return ApiResponse.failure('Friends shorts error: $e');
     }
   }
 
@@ -237,6 +261,21 @@ class ShortRepositoryImpl implements ShortRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to delete comment'));
     } catch (e) {
       return ApiResponse.failure('Delete failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<void>> deleteShort(String id) async {
+    try {
+      await _provider.deleteShort(id);
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to delete short'));
+    } catch (e) {
+      return ApiResponse.failure('Delete short failed: $e');
     }
   }
 }

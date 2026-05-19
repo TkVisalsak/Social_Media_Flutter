@@ -24,11 +24,21 @@ class PostDetailController extends GetxController {
   final replyTo         = Rxn<CommentModel>();
   final inputController = TextEditingController();
 
+  // Reactive interaction state — mirrors the post's initial values
+  late final isLiked     = false.obs;
+  late final isSaved     = false.obs;
+  late final likesCount  = 0.obs;
+  late final sharesCount = 0.obs;
+
   @override
   void onInit() {
     super.onInit();
     if (_initialPost != null) {
       post.value = _initialPost;
+      isLiked.value     = _initialPost.isLiked;
+      isSaved.value     = _initialPost.isSaved;
+      likesCount.value  = _initialPost.likesCount;
+      sharesCount.value = _initialPost.sharesCount;
       fetchComments();
       return;
     }
@@ -36,6 +46,10 @@ class PostDetailController extends GetxController {
     final arg = Get.arguments;
     if (arg is PostModel) {
       post.value = arg;
+      isLiked.value     = arg.isLiked;
+      isSaved.value     = arg.isSaved;
+      likesCount.value  = arg.likesCount;
+      sharesCount.value = arg.sharesCount;
       fetchComments();
     } else {
       // String postId — came from deep link or route param
@@ -57,6 +71,10 @@ class PostDetailController extends GetxController {
     isLoadingPost(false);
     if (res.success && res.data != null) {
       post.value = res.data;
+      isLiked.value     = res.data!.isLiked;
+      isSaved.value     = res.data!.isSaved;
+      likesCount.value  = res.data!.likesCount;
+      sharesCount.value = res.data!.sharesCount;
       fetchComments();
     } else {
       error(res.error ?? 'Post not found');
@@ -117,5 +135,55 @@ class PostDetailController extends GetxController {
       Get.snackbar('Error', res.error ?? 'Failed to delete comment',
           snackPosition: SnackPosition.BOTTOM);
     }
+  }
+
+  Future<void> toggleLike() async {
+    final wasLiked = isLiked.value;
+    isLiked.value = !wasLiked;
+    likesCount.value += wasLiked ? -1 : 1;
+    final res = await _feedRepo.toggleLike(post.value!.id, wasLiked: wasLiked);
+    if (!res.success) {
+      isLiked.value = wasLiked;
+      likesCount.value += wasLiked ? 1 : -1;
+    } else {
+      // Sync updated like state back to FeedController without re-calling the API.
+      if (Get.isRegistered<FeedController>()) {
+        final fc = Get.find<FeedController>();
+        final idx = fc.posts.indexWhere((p) => p.id == post.value!.id);
+        if (idx >= 0) {
+          fc.posts[idx] = fc.posts[idx].copyWith(
+            isLiked: isLiked.value,
+            likesCount: likesCount.value,
+          );
+          fc.posts.refresh();
+        }
+      }
+    }
+  }
+
+  Future<void> toggleSave() async {
+    final wasSaved = isSaved.value;
+    isSaved.value = !wasSaved;
+    final res = wasSaved
+        ? await _feedRepo.unsavePost(post.value!.id)
+        : await _feedRepo.savePost(post.value!.id);
+    if (!res.success) {
+      isSaved.value = wasSaved;
+    } else {
+      // Sync updated save state back to FeedController without re-calling the API.
+      if (Get.isRegistered<FeedController>()) {
+        final fc = Get.find<FeedController>();
+        final idx = fc.posts.indexWhere((p) => p.id == post.value!.id);
+        if (idx >= 0) {
+          fc.posts[idx] = fc.posts[idx].copyWith(isSaved: isSaved.value);
+          fc.posts.refresh();
+        }
+      }
+    }
+  }
+
+  Future<void> incrementShareCount() async {
+    sharesCount.value++;
+    await _feedRepo.sharePost(post.value!.id);
   }
 }

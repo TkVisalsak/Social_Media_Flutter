@@ -20,31 +20,34 @@ class ShortsView extends GetView<ShortsController> {
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Obx(() {
-        if (controller.isLoading.value && controller.shorts.isEmpty) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
-        }
-        if (controller.shorts.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.video_library_outlined, size: 64, color: Colors.white38),
-                const SizedBox(height: 16),
-                Text(controller.error.value ?? 'No reels yet',
-                    style: const TextStyle(color: Colors.white54)),
-              ],
-            ),
-          );
-        }
-
-        return Stack(
-          children: [
-            _ReelPageView(controller: controller),
-            _TopBar(),
-          ],
-        );
-      }),
+      body: Stack(
+        children: [
+          // Content (loading/empty/reels) — always in background
+          Obx(() {
+            if (controller.isLoading.value && controller.shorts.isEmpty) {
+              return const Center(
+                  child: CircularProgressIndicator(color: Colors.white));
+            }
+            if (controller.shorts.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.video_library_outlined,
+                        size: 64, color: Colors.white38),
+                    const SizedBox(height: 16),
+                    Text(controller.error.value ?? 'No reels yet',
+                        style: const TextStyle(color: Colors.white54)),
+                  ],
+                ),
+              );
+            }
+            return _ReelPageView(controller: controller);
+          }),
+          // TopBar always on top — user can always toggle FYP/Friends
+          _TopBar(),
+        ],
+      ),
     );
   }
 }

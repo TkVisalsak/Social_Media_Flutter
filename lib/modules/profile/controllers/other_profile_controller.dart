@@ -71,7 +71,13 @@ class OtherProfileController extends GetxController {
       posts.assignAll(p);
       postsCount(p.length);
     }
-    if (results[4].success) shorts.assignAll(results[4].data as List<ShortModel>);
+    if (results[4].success) {
+      shorts.assignAll(results[4].data as List<ShortModel>);
+    } else {
+      Get.snackbar('Reels', (results[4].error ?? 'Failed to load reels'),
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3));
+    }
     if (results[5].success) reposts.assignAll(results[5].data as List<RepostModel>);
 
     isLoading(false);

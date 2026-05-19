@@ -6,6 +6,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/models/repost_model.dart';
 import '../../../data/repositories/repost_repository.dart';
+import '../../../shared/widgets/social_action_buttons.dart';
 import '../../../shared/widgets/story_avatar.dart';
 import '../controllers/feed_controller.dart';
 import '../screens/image_viewer_screen.dart';
@@ -129,38 +130,56 @@ class _PostCardState extends State<PostCard> {
     final images     = post.imageUrls;
     final caption    = post.caption ?? '';
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _PostHeader(username: username, profilePic: profilePic,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: _PostHeader(username: username, profilePic: profilePic,
               subtitle: post.location ?? '', post: post),
-          const SizedBox(height: 12),
-          if (images.isNotEmpty)
-            _PostImageSlider(images: images, onLike: _forceLike),
-          const SizedBox(height: 14),
-          _PostActions(
-            post: post,
-            isReposted: _isReposted,
-            isRepostLoading: _repostLoading,
-            onToggleLike: _toggleLike,
-            onComment: _openComments,
-            onRepost: _toggleRepost,
-            onShare: _openShare,
-          ),
-          const SizedBox(height: 12),
-          _PostCaption(
-            username: username,
-            caption: caption,
-            commentCount: post.commentsCount,
-            timeAgo: _timeAgo(post.createdAt),
-            onViewComments: _openComments,
-          ),
-          const SizedBox(height: 18),
-          Container(height: 1.2, color: AppColors.divider),
-        ],
-      ),
+        ),
+        const SizedBox(height: 12),
+        if (images.isNotEmpty)
+          _PostImageSlider(images: images, onLike: _forceLike),
+        const SizedBox(height: 10),
+        Obx(() {
+          final ctrl = Get.find<FeedController>();
+          final idx = ctrl.posts.indexWhere((p) => p.id == widget.post.id);
+          final livePost = idx >= 0 ? ctrl.posts[idx] : widget.post;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _PostActions(
+                      post: livePost,
+                      isReposted: _isReposted,
+                      isRepostLoading: _repostLoading,
+                      onToggleLike: _toggleLike,
+                      onComment: _openComments,
+                      onRepost: _toggleRepost,
+                      onShare: _openShare,
+                    ),
+                    const SizedBox(height: 12),
+                    _PostCaption(
+                      username: username,
+                      caption: caption,
+                      commentCount: livePost.commentsCount,
+                      timeAgo: _timeAgo(livePost.createdAt),
+                      onViewComments: _openComments,
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+                ),
+              ),
+              Container(height: 1.2, color: AppColors.divider),
+            ],
+          );
+        }),
+      ],
     );
   }
 }
@@ -251,9 +270,7 @@ class _PostImageSliderState extends State<_PostImageSlider> {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
-      child: Stack(
+    return Stack(
         alignment: Alignment.center,
         children: [
           SizedBox(
@@ -332,7 +349,6 @@ class _PostImageSliderState extends State<_PostImageSlider> {
             ),
           ),
         ],
-      ),
     );
   }
 }
@@ -370,33 +386,33 @@ class _PostActions extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Row(
         children: [
-          _Btn(
-            icon: post.isLiked ? Icons.favorite : Icons.favorite_outline,
-            label: _fmt(post.likesCount),
-            color: post.isLiked ? AppColors.like : Colors.black,
-            scale: post.isLiked ? 1.15 : 1.0,
-            onTap: onToggleLike,
+          LikeButton(
+            isLiked: post.isLiked,
+            likeCount: post.likesCount,
+            onTap: (_) => onToggleLike(),
+            size: 26,
+            likedColor: AppColors.like,
+            unlikedColor: Colors.black,
           ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 8),
           _Btn(
             icon: Icons.chat_bubble_outline_rounded,
             label: _fmt(post.commentsCount),
             onTap: onComment,
           ),
-          const SizedBox(width: 18),
-          isRepostLoading
-              ? const SizedBox(
-                  width: 26, height: 26,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.black54))
-              : _Btn(
-                  icon: Icons.repeat_rounded,
-                  label: _fmt(post.repostsCount),
-                  color: isReposted ? AppColors.repost : Colors.black,
-                  scale: isReposted ? 1.15 : 1.0,
-                  onTap: onRepost,
-                ),
-          const SizedBox(width: 18),
+          const SizedBox(width: 8),
+          IgnorePointer(
+            ignoring: isRepostLoading,
+            child: RepostButton(
+              isReposted: isReposted,
+              repostCount: post.repostsCount,
+              onTap: (_) => onRepost(),
+              size: 22,
+              repostedColor: AppColors.repost,
+              unrepostedColor: Colors.black87,
+            ),
+          ),
+          const SizedBox(width: 8),
           _Btn(icon: Icons.reply_rounded, label: _fmt(post.sharesCount), onTap: onShare),
           const Spacer(),
           GestureDetector(
@@ -419,37 +435,30 @@ class _PostActions extends StatelessWidget {
 class _Btn extends StatelessWidget {
   final IconData icon;
   final String   label;
-  final Color    color;
-  final double   scale;
   final VoidCallback onTap;
 
   const _Btn({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.color = Colors.black,
-    this.scale = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          AnimatedScale(
-            duration: const Duration(milliseconds: 200),
-            scale: scale,
-            child: Icon(icon, size: 26, color: color),
-          ),
+          Icon(icon, size: 26, color: Colors.black),
           if (label.isNotEmpty) ...[
-            const SizedBox(height: 3),
+            const SizedBox(width: 5),
             Text(label,
                 style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87)),
+                    color: Colors.black87,
+                    fontFamily: 'Roboto')),
           ],
         ],
       ),
@@ -483,7 +492,10 @@ class _PostCaption extends StatelessWidget {
           RichText(
             text: TextSpan(
               style: const TextStyle(
-                  color: Colors.black, fontSize: 14, height: 1.7),
+                  color: Colors.black,
+                  fontSize: 14,
+                  height: 1.7,
+                  fontFamily: 'Roboto'),
               children: [
                 TextSpan(
                     text: '$username ',

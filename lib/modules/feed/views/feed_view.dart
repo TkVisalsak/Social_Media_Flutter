@@ -20,7 +20,8 @@ class FeedView extends GetView<FeedController> {
           onRefresh: () => controller.fetchFeed(refresh: true),
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
-              if (notification.metrics.pixels >= notification.metrics.maxScrollExtent - 200) {
+              if (notification.metrics.pixels >=
+                  notification.metrics.maxScrollExtent - 200) {
                 controller.fetchFeed();
               }
               return false;
@@ -48,7 +49,8 @@ class FeedView extends GetView<FeedController> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey),
+                            const Icon(Icons.photo_library_outlined,
+                                size: 64, color: Colors.grey),
                             const SizedBox(height: 16),
                             Text(
                               controller.error.value ?? 'No posts yet',
@@ -66,7 +68,8 @@ class FeedView extends GetView<FeedController> {
                           return controller.hasMore.value
                               ? const Padding(
                                   padding: EdgeInsets.all(16),
-                                  child: Center(child: CircularProgressIndicator()),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
                                 )
                               : const SizedBox(height: 80);
                         }

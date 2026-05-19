@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../core/config/app_config.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/error_interceptor.dart';
 import 'interceptors/logging_interceptor.dart';
@@ -7,7 +8,7 @@ import 'interceptors/refresh_interceptor.dart';
 import '../providers/local_storage.dart';
 
 class DioClient {
-  static const baseUrl = 'https://social-media-uav6.onrender.com/api';
+  static String get baseUrl => AppConfig.apiBaseUrl;
   static Dio? _instance;
 
   DioClient._();

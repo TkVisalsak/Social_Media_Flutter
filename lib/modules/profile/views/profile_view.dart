@@ -7,6 +7,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../data/models/post_model.dart';
+import '../../feed/widgets/feed_create_flow.dart';
+import '../../shorts/screens/user_shorts_player.dart';
 import '../controllers/highlights_controller.dart';
 import '../controllers/profile_controller.dart';
 
@@ -30,7 +32,7 @@ class ProfileView extends GetView<ProfileController> {
           ],
         )),
         actions: [
-          IconButton(icon: const Icon(Icons.add_box_outlined), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.add_box_outlined), onPressed: () => FeedCreateFlow.showOptions(context)),
           IconButton(
             icon: const Icon(Icons.menu),
             onPressed: () => _showOptionsMenu(context),
@@ -285,22 +287,49 @@ class ProfileView extends GetView<ProfileController> {
         itemBuilder: (context, i) {
           final short = controller.myShorts[i];
           final thumb = short.thumbnailUrl;
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              if (thumb != null && thumb.isNotEmpty)
-                Image.network(thumb, fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(color: Colors.black))
-              else
-                Container(color: Colors.black),
-              const Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: EdgeInsets.all(4),
-                  child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+          return GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => UserShortsPlayer(
+                  shorts: controller.myShorts.toList(),
+                  initialIndex: i,
                 ),
               ),
-            ],
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (thumb != null && thumb.isNotEmpty)
+                  Image.network(thumb, fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(0xFF2C2C2C), Color(0xFF111111)],
+                          ),
+                        ),
+                      ))
+                else
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFF2C2C2C), Color(0xFF111111)],
+                      ),
+                    ),
+                  ),
+                const Align(
+                  alignment: Alignment.bottomRight,
+                  child: Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
           );
         },
       );
@@ -327,9 +356,12 @@ class ProfileView extends GetView<ProfileController> {
           final PostModel post = controller.likedPosts[i];
           final url = post.firstImageUrl;
           if (url == null || url.isEmpty) {
-            return Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.image_outlined, color: Colors.grey),
+            return GestureDetector(
+              onTap: () => controller.openPostDetail(post),
+              child: Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image_outlined, color: Colors.grey),
+              ),
             );
           }
           return GestureDetector(
@@ -364,9 +396,12 @@ class ProfileView extends GetView<ProfileController> {
           final PostModel post = controller.savedPosts[i];
           final url = post.firstImageUrl;
           if (url == null || url.isEmpty) {
-            return Container(
-              color: Colors.grey[200],
-              child: const Icon(Icons.image_outlined, color: Colors.grey),
+            return GestureDetector(
+              onTap: () => controller.openPostDetail(post),
+              child: Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image_outlined, color: Colors.grey),
+              ),
             );
           }
           return GestureDetector(

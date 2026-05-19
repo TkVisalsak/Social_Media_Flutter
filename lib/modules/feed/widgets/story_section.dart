@@ -10,24 +10,33 @@ class StorySection extends GetWidget<StoryFeedController> {
   const StorySection({super.key});
 
   List<StoryViewerUser> _buildViewerUsers() {
-    return controller.groupedByUser.map((userStories) {
-      final first = userStories.first;
-      final username = first.user.username ?? first.user.fullName ?? 'user';
-      final profilePic = first.user.profilePic ?? '';
-      return StoryViewerUser(
-        userId: first.user.id,
-        username: username,
-        profileImage: profilePic,
-        isNetworkImage: profilePic.startsWith('http'),
-        stories: userStories.expand((s) => s.mediaUrl.map((m) => StoryViewerItem(
-          storyId: s.id,
-          type: m.type == 'video' ? StoryViewerType.video : StoryViewerType.image,
-          media: m.url,
-          isNetwork: m.url.startsWith('http'),
-          time: _timeAgo(s.createdAt),
-        ))).toList(),
-      );
-    }).toList();
+    final myId = controller.myUserId;
+    return controller.groupedByUser
+        .where((userStories) => userStories.first.user.id != myId)
+        .map((userStories) {
+          final first = userStories.first;
+          final username = first.user.username ?? first.user.fullName ?? 'user';
+          final profilePic = first.user.profilePic ?? '';
+          return StoryViewerUser(
+            userId: first.user.id,
+            username: username,
+            profileImage: profilePic,
+            isNetworkImage: profilePic.startsWith('http'),
+            stories: userStories.expand((s) => s.mediaUrl.map((m) => StoryViewerItem(
+              storyId: s.id,
+              type: m.type == 'video' ? StoryViewerType.video : StoryViewerType.image,
+              media: m.url,
+              isNetwork: m.url.startsWith('http'),
+              time: _timeAgo(s.createdAt),
+            ))).toList(),
+          );
+        })
+        .toList()
+      ..sort((a, b) {
+        // Unseen stories first (left), seen stories last (right)
+        if (a.viewed == b.viewed) return 0;
+        return a.viewed ? 1 : -1;
+      });
   }
 
   static String _timeAgo(DateTime t) {

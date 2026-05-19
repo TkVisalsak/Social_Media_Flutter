@@ -39,8 +39,10 @@ abstract class ApiEndpoints {
   static const repostUser = '/repost/user';
 
   // ── Shorts ────────────────────────────────────
+  static const shortsVideo = '/shorts/video';
   static const shortsCreate = '/shorts/video/createshort';
   static const shortsAll = '/shorts/video/getallshorts';
+  static const friendsShorts = '/shorts/video/getfriendsshorts';
   static const shortsView = '/shorts/video/short'; // /:id/viewshort
   static const shortLikes = '/shorts/likes';
   static const shortComments = '/shorts/comments';

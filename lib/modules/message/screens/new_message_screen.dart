@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/providers/local_storage.dart';
+import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/message_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../controllers/message_controller.dart';
@@ -16,11 +18,33 @@ class NewMessageScreen extends StatefulWidget {
 
 class _NewMessageScreenState extends State<NewMessageScreen> {
   final _searchCtrl = TextEditingController();
-  List<UserModel> _results  = [];
-  List<UserModel> _selected = [];
-  bool            _loading  = false;
-  bool            _isGroup  = false;
+  List<UserModel> _results        = [];
+  List<UserModel> _selected       = [];
+  List<UserModel> _followingList  = [];
+  bool            _loading        = false;
+  bool            _loadingFollowing = false;
+  bool            _isGroup        = false;
   Timer?          _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowing();
+  }
+
+  Future<void> _loadFollowing() async {
+    final me = await LocalStorage.user;
+    if (me == null || !mounted) return;
+    setState(() => _loadingFollowing = true);
+    final repo = Get.find<FollowRepository>();
+    final res = await repo.getFollowing(me.id);
+    if (mounted) {
+      setState(() {
+        if (res.success) _followingList = res.data ?? [];
+        _loadingFollowing = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -215,68 +239,73 @@ class _NewMessageScreenState extends State<NewMessageScreen> {
 
           // Results
           Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _results.isEmpty
-                    ? Center(
-                        child: Text(
-                          _searchCtrl.text.isEmpty
-                              ? 'Search for someone to message'
-                              : 'No results',
-                          style: const TextStyle(color: Colors.grey),
-                        ),
-                      )
-                    : ListView.separated(
-                        itemCount: _results.length,
-                        separatorBuilder: (_, __) => Divider(
-                            height: 1,
-                            indent: 72,
-                            color: Colors.grey[100]),
-                        itemBuilder: (_, i) {
-                          final u = _results[i];
-                          final name = u.username ??
-                              u.fullName ??
-                              u.email.split('@').first;
-                          final pic = u.profilePic;
-                          final sel =
-                              _selected.any((s) => s.id == u.id);
-                          return ListTile(
-                            onTap: _isGroup
-                                ? () => _toggleSelect(u)
-                                : () => _openDm(u),
-                            leading: CircleAvatar(
-                              radius: 24,
-                              backgroundColor: Colors.grey[200],
-                              backgroundImage: pic != null &&
-                                      pic.isNotEmpty
-                                  ? NetworkImage(pic)
-                                  : null,
-                              child: pic == null || pic.isEmpty
-                                  ? Text(
-                                      name.isNotEmpty
-                                          ? name[0].toUpperCase()
-                                          : '?',
-                                      style: const TextStyle(
-                                          fontWeight:
-                                              FontWeight.bold))
-                                  : null,
-                            ),
-                            title: Text(name,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 15)),
-                            trailing: _isGroup
-                                ? Icon(
-                                    sel
-                                        ? Icons.check_circle
-                                        : Icons.circle_outlined,
-                                    color: sel
-                                        ? const Color(0xFF3797F0)
-                                        : Colors.grey[400])
-                                : null,
-                          );
-                        },
-                      ),
+            child: Builder(builder: (context) {
+              // When in group mode with an empty search field, show the
+              // people the current user already follows so they can quickly
+              // pick friends without needing to type.
+              final displayList = (_isGroup && _searchCtrl.text.isEmpty)
+                  ? _followingList
+                  : _results;
+
+              final isWorking = _loading ||
+                  (_isGroup && _searchCtrl.text.isEmpty && _loadingFollowing);
+
+              if (isWorking) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (displayList.isEmpty) {
+                return Center(
+                  child: Text(
+                    _isGroup && _searchCtrl.text.isEmpty
+                        ? 'No following users found'
+                        : _searchCtrl.text.isEmpty
+                            ? 'Search for someone to message'
+                            : 'No results',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                );
+              }
+
+              return ListView.separated(
+                itemCount: displayList.length,
+                separatorBuilder: (_, __) =>
+                    Divider(height: 1, indent: 72, color: Colors.grey[100]),
+                itemBuilder: (_, i) {
+                  final u = displayList[i];
+                  final name =
+                      u.username ?? u.fullName ?? u.email.split('@').first;
+                  final pic = u.profilePic;
+                  final sel = _selected.any((s) => s.id == u.id);
+                  return ListTile(
+                    onTap:
+                        _isGroup ? () => _toggleSelect(u) : () => _openDm(u),
+                    leading: CircleAvatar(
+                      radius: 24,
+                      backgroundColor: Colors.grey[200],
+                      backgroundImage:
+                          pic != null && pic.isNotEmpty ? NetworkImage(pic) : null,
+                      child: pic == null || pic.isEmpty
+                          ? Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold))
+                          : null,
+                    ),
+                    title: Text(name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 15)),
+                    trailing: _isGroup
+                        ? Icon(
+                            sel ? Icons.check_circle : Icons.circle_outlined,
+                            color: sel
+                                ? const Color(0xFF3797F0)
+                                : Colors.grey[400])
+                        : null,
+                  );
+                },
+              );
+            }),
           ),
         ],
       ),

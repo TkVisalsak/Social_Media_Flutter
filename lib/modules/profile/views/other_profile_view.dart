@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../data/models/repost_model.dart';
+import '../../../shared/widgets/social_action_buttons.dart';
 import '../../shorts/screens/user_shorts_player.dart';
 import '../controllers/other_profile_controller.dart';
 
@@ -232,33 +233,14 @@ class _FollowButton extends StatelessWidget {
     return Obx(() {
       final following = controller.isFollowing.value;
       final loading   = controller.isFollowLoading.value;
-      return SizedBox(
-        height: 32,
-        child: TextButton(
-          onPressed: loading ? null : controller.toggleFollow,
-          style: TextButton.styleFrom(
-            backgroundColor: following ? Colors.grey[100] : Colors.black,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)),
-            padding: EdgeInsets.zero,
-          ),
-          child: loading
-              ? SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: following ? Colors.black : Colors.white,
-                  ),
-                )
-              : Text(
-                  following ? 'Following' : 'Follow',
-                  style: TextStyle(
-                    color: following ? Colors.black : Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
+      return IgnorePointer(
+        ignoring: loading,
+        child: FollowButton(
+          isFollowing: following,
+          onTap: (_) => controller.toggleFollow(),
+          brandColor: Colors.black,
+          height: 32,
+          fillWidth: true,
         ),
       );
     });

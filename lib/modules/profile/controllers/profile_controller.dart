@@ -9,17 +9,12 @@ import '../../../core/services/socket_service.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/models/save_model.dart';
 import '../../../data/models/short_model.dart';
-import '../../../data/providers/comments_provider.dart';
 import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/auth_repository.dart';
-import '../../../data/repositories/comments_repository.dart';
 import '../../../data/repositories/feed_repository.dart';
 import '../../../data/repositories/follow_repository.dart';
 import '../../../data/repositories/save_repository.dart';
 import '../../../data/repositories/short_repository.dart';
-import '../../post_detail/controllers/post_detail_controller.dart';
-import '../../post_detail/views/post_detail_view.dart';
-import 'package:dio/dio.dart';
 
 class ProfileController extends GetxController {
   final AuthRepository  _authRepo;
@@ -95,6 +90,10 @@ class ProfileController extends GetxController {
     }
     if (shortsRes.success && shortsRes.data != null) {
       myShorts.assignAll(shortsRes.data!);
+    } else if (!shortsRes.success) {
+      Get.snackbar('Reels', shortsRes.error ?? 'Failed to load reels',
+          snackPosition: SnackPosition.BOTTOM,
+          duration: const Duration(seconds: 3));
     }
     if (likedRes.success && likedRes.data != null) {
       likedPosts.assignAll(likedRes.data!);
@@ -126,54 +125,9 @@ class ProfileController extends GetxController {
 
   String? get userId => _userId;
 
-  /// Open a post in the detail sheet (same pattern as FeedController).
+  /// Open a post in the full-page detail view.
   Future<void> openPostDetail(PostModel post) async {
-    if (!Get.isRegistered<CommentsRepository>()) {
-      Get.lazyPut<CommentsProvider>(() => CommentsProvider(Get.find<Dio>()));
-      Get.lazyPut<CommentsRepository>(
-        () => CommentsRepositoryImpl(Get.find<CommentsProvider>()),
-      );
-    }
-    if (Get.isRegistered<PostDetailController>()) {
-      Get.delete<PostDetailController>(force: true);
-    }
-    Get.put(
-      PostDetailController(
-        Get.find<CommentsRepository>(),
-        Get.find<FeedRepository>(),
-        initialPost: post,
-      ),
-    );
-
-    final ctx = Get.context;
-    if (ctx == null) return;
-
-    await showModalBottomSheet<void>(
-      context: ctx,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        final h = MediaQuery.sizeOf(sheetContext).height * 0.72;
-        final inset = MediaQuery.viewInsetsOf(sheetContext).bottom;
-        return Padding(
-          padding: EdgeInsets.only(bottom: inset),
-          child: Container(
-            height: h,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: const PostDetailView.sheet(),
-          ),
-        );
-      },
-    );
-
-    if (Get.isRegistered<PostDetailController>()) {
-      Get.delete<PostDetailController>(force: true);
-    }
+    Get.toNamed(AppRoutes.POST_DETAIL, arguments: post);
   }
 
   Future<void> updateProfile() async {

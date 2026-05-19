@@ -3,14 +3,13 @@ import 'dart:async';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../../data/providers/local_storage.dart';
+import '../config/app_config.dart';
 
 /// Wraps the Socket.io connection for realtime messaging & notifications.
 /// One instance lives in InitialBinding as a permanent singleton.
 /// Call [connect] after successful login and [disconnect] on logout.
 class SocketService {
-  SocketService({String? url}) : _url = url ?? _defaultUrl;
-
-  static const _defaultUrl = 'http://192.168.1.4:5001';
+  SocketService({String? url}) : _url = url ?? AppConfig.socketUrl;
 
   final String _url;
   io.Socket? _socket;

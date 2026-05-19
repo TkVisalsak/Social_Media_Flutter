@@ -55,9 +55,12 @@ class _UserShortsPlayerState extends State<UserShortsPlayer> {
       ctrl.isTabVisible(true);
     } else {
       // No global controller — create a temporary one.
+      // skipInitialFetch prevents fetchShorts() from racing with and
+      // overwriting the shorts list we are about to assign below.
       Get.put(ShortsController(
         Get.find<ShortRepository>(),
         Get.find<FollowRepository>(),
+        skipInitialFetch: true,
       ));
       _createdTempCtrl = true;
       final ctrl = Get.find<ShortsController>();

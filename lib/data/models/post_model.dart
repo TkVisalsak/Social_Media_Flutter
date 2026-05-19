@@ -62,23 +62,65 @@ class PostModel {
 
   String? get firstImageUrl => imageUrls.isNotEmpty ? imageUrls.first : null;
 
+  // ── Media parser (handles multiple backend formats) ──
+  static List<PostMedia> _parseMedia(Map<String, dynamic> j) {
+    // Format 1: media as [{type: 'image'/'video', url: '...'}] array (standard format)
+    final mediaRaw = j['media'] as List?;
+    if (mediaRaw != null && mediaRaw.isNotEmpty) {
+      return mediaRaw
+          .whereType<Map>()
+          .map((e) => PostMedia.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    // Format 2: imageUrl as List<String>
+    final imgList = (j['imageUrl'] is List ? j['imageUrl'] : null) as List?;
+    if (imgList != null && imgList.isNotEmpty) {
+      return imgList
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .map((url) => PostMedia(type: 'image', url: url))
+          .toList();
+    }
+    // Format 3: imageUrls as List<String>
+    final imgList3 = (j['imageUrls'] is List ? j['imageUrls'] : null) as List?;
+    if (imgList3 != null && imgList3.isNotEmpty) {
+      return imgList3
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .map((url) => PostMedia(type: 'image', url: url))
+          .toList();
+    }
+    // Format 4: images as List<String>
+    final imgList2 = (j['images'] is List ? j['images'] : null) as List?;
+    if (imgList2 != null && imgList2.isNotEmpty) {
+      return imgList2
+          .whereType<String>()
+          .where((s) => s.isNotEmpty)
+          .map((url) => PostMedia(type: 'image', url: url))
+          .toList();
+    }
+    // Format 5: single imageUrl or image string
+    final single = j['imageUrl'] ?? j['image'];
+    if (single is String && single.isNotEmpty) {
+      return [PostMedia(type: 'image', url: single)];
+    }
+    return [];
+  }
+
   // ── fromJson ──────────────────────────────────────
   factory PostModel.fromJson(Map<String, dynamic> j) {
     final userRaw = j['user'] ?? j['author'] ?? {};
     return PostModel(
       id: j['id'] ?? j['_id'] ?? '',
       user: UserModel.fromJson(userRaw is Map ? Map<String, dynamic>.from(userRaw) : {}),
-      media: (j['media'] as List?)
-              ?.map((e) => PostMedia.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      media: _parseMedia(j),
       caption: JsonUtils.nullableString(j['caption']),
-      likesCount: JsonUtils.toInt(j['likesCount']),
-      commentsCount: JsonUtils.toInt(j['commentsCount']),
-      sharesCount: JsonUtils.toInt(j['sharesCount']),
-      repostsCount: JsonUtils.toInt(j['repostsCount']),
-      isLiked: JsonUtils.toBool(j['isLiked']),
-      isSaved: JsonUtils.toBool(j['isSaved']),
+      likesCount:    JsonUtils.toInt(j['likesCount']    ?? j['likes_count']    ?? j['likes']),
+      commentsCount: JsonUtils.toInt(j['commentsCount'] ?? j['comments_count'] ?? j['comments']),
+      sharesCount:   JsonUtils.toInt(j['sharesCount']   ?? j['shares_count']   ?? j['shares']),
+      repostsCount:  JsonUtils.toInt(j['repostsCount']  ?? j['reposts_count']  ?? j['reposts']),
+      isLiked: JsonUtils.toBool(j['isLiked'] ?? j['is_liked'] ?? j['liked']),
+      isSaved: JsonUtils.toBool(j['isSaved'] ?? j['is_saved'] ?? j['saved']),
       visibility: j['visibility'] ?? 'public',
       hashtags: (j['hashtags'] as List?)?.map((e) => e.toString()).toList() ?? [],
       location: JsonUtils.nullableString(j['location']),

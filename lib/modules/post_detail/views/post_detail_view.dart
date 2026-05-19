@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../data/models/post_model.dart';
+import '../../../shared/widgets/social_action_buttons.dart';
 import '../controllers/post_detail_controller.dart';
 
 class PostDetailView extends GetView<PostDetailController> {
@@ -28,6 +29,68 @@ class PostDetailView extends GetView<PostDetailController> {
             final p = controller.post.value;
             if (p == null) return const SizedBox.shrink();
             return _PostSummary(post: p);
+          }),
+
+        // ── Action row (route mode only) ─────────────────
+        if (!isSheet)
+          Obx(() {
+            final ctrl = Get.find<PostDetailController>();
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Row(
+                children: [
+                  LikeButton(
+                    isLiked: ctrl.isLiked.value,
+                    likeCount: ctrl.likesCount.value,
+                    onTap: (_) => ctrl.toggleLike(),
+                    size: 26,
+                    likedColor: const Color(0xFFF02849),
+                    unlikedColor: Colors.black,
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {}, // already on comments
+                    child: Row(
+                      children: [
+                        const Icon(Icons.chat_bubble_outline_rounded, size: 26),
+                        const SizedBox(width: 5),
+                        Obx(() => Text(
+                          '${Get.find<PostDetailController>().comments.length}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        )),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => ctrl.incrementShareCount(),
+                    child: Row(
+                      children: [
+                        Transform.scale(scaleX: -1, child: const Icon(Icons.reply_rounded, size: 26)),
+                        const SizedBox(width: 5),
+                        Obx(() => Text(
+                          '${Get.find<PostDetailController>().sharesCount.value}',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                        )),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Obx(() => GestureDetector(
+                    onTap: () => Get.find<PostDetailController>().toggleSave(),
+                    child: Icon(
+                      Get.find<PostDetailController>().isSaved.value
+                          ? Icons.bookmark
+                          : Icons.bookmark_outline,
+                      size: 25,
+                      color: Get.find<PostDetailController>().isSaved.value
+                          ? const Color(0xFF3797F0)
+                          : Colors.black,
+                    ),
+                  )),
+                ],
+              ),
+            );
           }),
 
         // ── Comments list ────────────────────────────────

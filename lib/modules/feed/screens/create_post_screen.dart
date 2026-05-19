@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../data/models/user_model.dart';
+import '../../../data/repositories/user_repository.dart';
 import '../controllers/feed_controller.dart';
 
 // ─── Audience enum ────────────────────────────────────────────────────────────
@@ -47,33 +50,7 @@ const _feelings = [
   ('🥰', 'Blessed'),  ('😰', 'Worried'),   ('🎉', 'Celebrating'),
 ];
 
-const _mockLocations = [
-  (icon: Icons.location_on,        label: 'Paris, France'),
-  (icon: Icons.location_on,        label: 'New York, NY'),
-  (icon: Icons.location_on,        label: 'Tokyo, Japan'),
-  (icon: Icons.location_on,        label: 'London, UK'),
-  (icon: Icons.location_on,        label: 'Sydney, Australia'),
-  (icon: Icons.location_on,        label: 'Los Angeles, CA'),
-  (icon: Icons.location_on,        label: 'Berlin, Germany'),
-  (icon: Icons.my_location_rounded, label: 'Use current location'),
-];
 
-class _TagContact {
-  final String name;
-  final String avatar;
-  const _TagContact({required this.name, required this.avatar});
-}
-
-const _tagContacts = [
-  _TagContact(name: 'Iko',           avatar: 'assets/images/story2.jpg'),
-  _TagContact(name: 'Jules H.',      avatar: 'assets/images/post3.jpg'),
-  _TagContact(name: 'Mara S.',       avatar: 'assets/images/post6.jpg'),
-  _TagContact(name: 'Ona',           avatar: 'assets/images/story1.jpg'),
-  _TagContact(name: 'Lev P.',        avatar: 'assets/images/post7.jpg'),
-  _TagContact(name: 'Danny K.',      avatar: 'assets/images/post8.jpg'),
-  _TagContact(name: 'Raffialdo',     avatar: 'assets/images/story3.jpg'),
-  _TagContact(name: 'Debora',        avatar: 'assets/images/post4.jpg'),
-];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -143,13 +120,31 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   }
 
   Future<void> _pickLocation() async {
-    final result = await showModalBottomSheet<String>(
-      context:            context,
-      isScrollControlled: true,
-      backgroundColor:    Colors.transparent,
-      builder: (_) => _LocationSheet(current: _location),
+    final ctrl = TextEditingController(text: _location);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Check in'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Enter a location...',
+            prefixIcon: Icon(Icons.location_on_outlined),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
     );
-    if (result != null) setState(() => _location = result);
+    ctrl.dispose();
+    if (result != null && result.isNotEmpty) setState(() => _location = result);
+    if (result != null && result.isEmpty) setState(() => _location = null);
   }
 
   Future<void> _tagPeople() async {
@@ -167,9 +162,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     setState(() => _isPosting = true);
 
     final visibility = switch (_audience) {
-      PostAudience.public   => 'public',
-      PostAudience.onlyMe   => 'private',
-      _                     => 'followers',
+      PostAudience.public          => 'public',
+      PostAudience.friends         => 'friends',
+      PostAudience.onlyMe          => 'private',
+      _                            => 'followers',
     };
 
     // Build caption: combine text, feeling tag, and location label.
@@ -177,10 +173,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (_feeling != null) caption = '$caption — feeling $_feeling'.trim();
 
     final ok = await Get.find<FeedController>().createPost(
-      caption:    caption.isEmpty ? null : caption,
-      imagePath:  _images.isNotEmpty ? _images.first.path : null,
-      visibility: visibility,
-      location:   _location,
+      caption:     caption.isEmpty ? null : caption,
+      imagePaths:  _images.map((x) => x.path).toList(),
+      visibility:  visibility,
+      location:    _location,
     );
 
     if (!mounted) return;
@@ -858,129 +854,10 @@ class _FeelingSheetState extends State<_FeelingSheet> {
   }
 }
 
-// ─── Location sheet ───────────────────────────────────────────────────────────
-
-class _LocationSheet extends StatefulWidget {
-  final String? current;
-  const _LocationSheet({required this.current});
-
-  @override
-  State<_LocationSheet> createState() => _LocationSheetState();
-}
-
-class _LocationSheetState extends State<_LocationSheet> {
-  final _searchCtrl = TextEditingController();
-  String  _query    = '';
-  String? _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.current;
-    _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.toLowerCase()));
-  }
-
-  @override
-  void dispose() {
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
-  List<({IconData icon, String label})> get _filtered => _query.isEmpty
-      ? _mockLocations
-      : _mockLocations.where((l) => l.label.toLowerCase().contains(_query)).toList();
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.65,
-      decoration: const BoxDecoration(
-        color:        Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              const Text('Add check-in', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-              Positioned(
-                right: 8,
-                child: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Search
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Container(
-              height: 42,
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus:  true,
-                decoration: InputDecoration(
-                  hintText:       'Search for a place...',
-                  hintStyle:      TextStyle(color: Colors.grey[400], fontSize: 14),
-                  prefixIcon:     const Icon(Icons.search, color: Colors.grey, size: 20),
-                  border:         InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Divider(height: 1, thickness: 0.5),
-
-          // Results
-          Expanded(
-            child: ListView.builder(
-              itemCount:   _filtered.length,
-              itemBuilder: (_, i) {
-                final loc        = _filtered[i];
-                final isSelected = _selected == loc.label;
-                return ListTile(
-                  leading: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color:  isSelected ? const Color(0xFFFFE8E8) : Colors.grey[100],
-                      shape:  BoxShape.circle,
-                    ),
-                    child: Icon(loc.icon, color: isSelected ? const Color(0xFFE02B2B) : Colors.black54, size: 20),
-                  ),
-                  title: Text(loc.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle_rounded, color: Color(0xFF0095F6))
-                      : null,
-                  onTap: () => Navigator.pop(context, loc.label),
-                );
-              },
-            ),
-          ),
-          SizedBox(height: bottomPad),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── Tag people sheet ─────────────────────────────────────────────────────────
 
 class _TagPeopleSheet extends StatefulWidget {
-  final List<String> current;
+  final List<String> current; // currently tagged usernames
   const _TagPeopleSheet({required this.current});
 
   @override
@@ -989,144 +866,106 @@ class _TagPeopleSheet extends StatefulWidget {
 
 class _TagPeopleSheetState extends State<_TagPeopleSheet> {
   final _searchCtrl = TextEditingController();
-  late final Set<String> _selected;
-  String _query = '';
+  List<UserModel> _results = [];
+  List<String> _selected = []; // usernames
+  bool _loading = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    _selected = Set.from(widget.current);
-    _searchCtrl.addListener(() => setState(() => _query = _searchCtrl.text.toLowerCase()));
+    _selected = List.from(widget.current);
   }
 
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
-  List<_TagContact> get _filtered => _query.isEmpty
-      ? _tagContacts
-      : _tagContacts.where((c) => c.name.toLowerCase().contains(_query)).toList();
+  Future<void> _search(String q) async {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) { setState(() => _results = []); return; }
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
+      setState(() => _loading = true);
+      final res = await Get.find<UserRepository>().search(q.trim());
+      if (mounted) setState(() { _results = res.data ?? []; _loading = false; });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.72,
-      decoration: const BoxDecoration(
-        color:        Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              const Text('Tag people', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-              Positioned(
-                right: 8,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context, _selected.toList()),
-                  child: const Text('Done', style: TextStyle(color: Color(0xFF0095F6), fontWeight: FontWeight.w700, fontSize: 15)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Selected chips
-          if (_selected.isNotEmpty)
-            SizedBox(
-              height: 40,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding:         const EdgeInsets.symmetric(horizontal: 16),
-                children: _selected.map((name) {
-                  final contact = _tagContacts.where((c) => c.name == name).firstOrNull;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Chip(
-                      avatar:           contact != null
-                          ? CircleAvatar(backgroundImage: AssetImage(contact.avatar), radius: 12)
-                          : null,
-                      label:            Text(name, style: const TextStyle(fontSize: 12)),
-                      onDeleted:        () => setState(() => _selected.remove(name)),
-                      deleteIconColor:  Colors.grey,
-                      backgroundColor:  const Color(0xFFE8F0FE),
-                      padding:          EdgeInsets.zero,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-
-          // Search
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Container(
-              height: 40,
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(10)),
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      minChildSize: 0.5,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: TextField(
                 controller: _searchCtrl,
+                autofocus: true,
+                onChanged: _search,
                 decoration: InputDecoration(
-                  hintText:       'Search friends...',
-                  hintStyle:      TextStyle(color: Colors.grey[400], fontSize: 14),
-                  prefixIcon:     Icon(Icons.search, color: Colors.grey[400], size: 20),
-                  border:         InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  hintText: 'Search people to tag...',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  isDense: true,
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Divider(height: 1, thickness: 0.5),
-
-          // Contact list
-          Expanded(
-            child: ListView.builder(
-              itemCount:   _filtered.length,
-              itemBuilder: (_, i) {
-                final c          = _filtered[i];
-                final isSelected = _selected.contains(c.name);
-                return ListTile(
-                  leading: CircleAvatar(radius: 22, backgroundImage: AssetImage(c.avatar)),
-                  title:   Text(c.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-                  trailing: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 26, height: 26,
-                    decoration: BoxDecoration(
-                      shape:  BoxShape.circle,
-                      color:  isSelected ? AppColors.primaryBlue : Colors.transparent,
-                      border: Border.all(
-                        color: isSelected ? AppColors.primaryBlue : Colors.grey[300]!,
-                        width: 2,
-                      ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView.builder(
+                      controller: scrollCtrl,
+                      itemCount: _results.length,
+                      itemBuilder: (_, i) {
+                        final u = _results[i];
+                        final name = u.username ?? u.fullName ?? u.email.split('@').first;
+                        final sel = _selected.contains(name);
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: u.profilePic != null && u.profilePic!.isNotEmpty
+                                ? NetworkImage(u.profilePic!) : null,
+                            child: u.profilePic == null || u.profilePic!.isEmpty
+                                ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?') : null,
+                          ),
+                          title: Text(name),
+                          trailing: Icon(sel ? Icons.check_circle : Icons.circle_outlined,
+                              color: sel ? const Color(0xFF1877F2) : Colors.grey),
+                          onTap: () => setState(() {
+                            sel ? _selected.remove(name) : _selected.add(name);
+                          }),
+                        );
+                      },
                     ),
-                    child: isSelected
-                        ? const Icon(Icons.check_rounded, color: Colors.white, size: 15)
-                        : null,
-                  ),
-                  onTap: () => setState(() {
-                    isSelected ? _selected.remove(c.name) : _selected.add(c.name);
-                  }),
-                );
-              },
             ),
-          ),
-          SizedBox(height: bottomPad),
-        ],
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, _selected),
+                    child: Text(_selected.isEmpty ? 'Done' : 'Tag ${_selected.length} people'),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

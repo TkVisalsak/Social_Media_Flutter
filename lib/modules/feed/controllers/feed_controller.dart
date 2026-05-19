@@ -56,10 +56,9 @@ class FeedController extends GetxController {
       final newPosts = res.data!.map((serverPost) {
         final existing = existingById[serverPost.id];
         if (existing == null) return serverPost;
-        // Preserve local counts & interaction state that the server doesn't
-        // persist (likesCount/commentsCount may be stale on the server).
-        // Keep local count if higher (guards against refresh racing an optimistic update).
-        // Trust server for isLiked/isSaved — those are computed from real DB tables.
+        // Keep the higher local count (guards against optimistic updates racing a
+        // refresh). Preserve isLiked/isSaved from local state with OR so that a
+        // backend feed list that omits these fields doesn't silently undo them.
         return serverPost.copyWith(
           likesCount: existing.likesCount > serverPost.likesCount
               ? existing.likesCount
@@ -70,6 +69,8 @@ class FeedController extends GetxController {
           repostsCount: existing.repostsCount > serverPost.repostsCount
               ? existing.repostsCount
               : serverPost.repostsCount,
+          isLiked: serverPost.isLiked || existing.isLiked,
+          isSaved: serverPost.isSaved || existing.isSaved,
         );
       }).toList();
       posts.addAll(newPosts);
@@ -112,7 +113,7 @@ class FeedController extends GetxController {
 
   Future<bool> createPost({
     String? caption,
-    String? imagePath,
+    List<String> imagePaths = const [],
     String visibility = 'public',
     String? location,
   }) async {
@@ -120,7 +121,7 @@ class FeedController extends GetxController {
     final me = await LocalStorage.user;
     final res = await _repo.createPost(
       caption: caption,
-      filePath: imagePath,
+      filePaths: imagePaths,
       visibility: visibility,
       location: location,
     );
@@ -184,6 +185,8 @@ class FeedController extends GetxController {
     if (!res.success) {
       posts[index] = old;
       posts.refresh();
+      Get.snackbar('Error', res.error ?? 'Failed to save post',
+          snackPosition: SnackPosition.BOTTOM);
     }
   }
 
