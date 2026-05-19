@@ -1,21 +1,51 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:get/get.dart';
 
+import '../../../data/models/post_model.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/repositories/feed_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 
 class UserSearchController extends GetxController {
   final UserRepository _repo;
-  UserSearchController(this._repo);
+  final FeedRepository _feedRepo;
+  UserSearchController(this._repo, this._feedRepo);
 
-  final results = <UserModel>[].obs;
+  // ── User search ───────────────────────────────
+  final results   = <UserModel>[].obs;
   final isLoading = false.obs;
-  final error = RxnString();
-  final query = ''.obs;
+  final error     = RxnString();
+  final query     = ''.obs;
+
+  // ── Explore grid ──────────────────────────────
+  final explorePosts   = <PostModel>[].obs;
+  final isExploreLoading = false.obs;
 
   Timer? _debounce;
   String _lastQuery = '';
+
+  @override
+  void onInit() {
+    super.onInit();
+    _fetchExplore();
+  }
+
+  Future<void> _fetchExplore() async {
+    isExploreLoading(true);
+    final res = await _feedRepo.getFeed(1);
+    if (res.success && res.data != null) {
+      final withImages = res.data!
+          .where((p) => p.firstImageUrl != null && p.firstImageUrl!.isNotEmpty)
+          .toList();
+      withImages.shuffle(Random());
+      explorePosts.assignAll(withImages);
+    }
+    isExploreLoading(false);
+  }
+
+  Future<void> refreshExplore() => _fetchExplore();
 
   void onQueryChanged(String q) {
     _debounce?.cancel();

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/post_model.dart';
+import '../../../core/services/repost_store.dart';
 import '../../../data/models/repost_model.dart';
 import '../../../data/repositories/repost_repository.dart';
 import '../../../shared/widgets/social_action_buttons.dart';
@@ -22,9 +23,38 @@ class PostCard extends StatefulWidget {
 }
 
 class _PostCardState extends State<PostCard> {
-  bool    _isReposted     = false;
-  String? _repostId;        // server-side repost document ID, needed to delete
-  bool    _repostLoading  = false;
+  bool    _isReposted    = false;
+  String? _repostId;
+  bool    _repostLoading = false;
+  Worker? _repostWorker;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromStore();
+    if (Get.isRegistered<RepostStore>()) {
+      _repostWorker = ever(Get.find<RepostStore>().version, (_) {
+        if (mounted) _syncFromStore();
+      });
+    }
+  }
+
+  void _syncFromStore() {
+    if (!Get.isRegistered<RepostStore>()) return;
+    final store = Get.find<RepostStore>();
+    // Don't override an in-progress optimistic update.
+    if (_repostLoading) return;
+    setState(() {
+      _isReposted = store.isReposted(widget.post.id);
+      _repostId   = store.repostDocId(widget.post.id);
+    });
+  }
+
+  @override
+  void dispose() {
+    _repostWorker?.dispose();
+    super.dispose();
+  }
 
   void _toggleLike() =>
       Get.find<FeedController>().toggleLike(widget.post.id);
@@ -60,11 +90,13 @@ class _PostCardState extends State<PostCard> {
         _isReposted = true;
         _repostId   = res.data!.id;
       });
+      if (Get.isRegistered<RepostStore>()) {
+        Get.find<RepostStore>().add(widget.post.id, res.data!.id);
+      }
       Get.find<FeedController>().toggleRepost(widget.post.id, reposted: true);
     } else {
       final err = res.error ?? '';
       if (err.toLowerCase().contains('already')) {
-        // User already reposted — sync UI silently without touching count.
         setState(() => _isReposted = true);
       } else {
         Get.snackbar('Repost failed', err.isNotEmpty ? err : 'Try again',
@@ -83,6 +115,9 @@ class _PostCardState extends State<PostCard> {
         _isReposted = false;
         _repostId   = null;
       });
+      if (Get.isRegistered<RepostStore>()) {
+        Get.find<RepostStore>().remove(widget.post.id);
+      }
       Get.find<FeedController>().toggleRepost(widget.post.id, reposted: false);
     } else {
       Get.snackbar('Error', res.error ?? 'Failed to remove repost',
@@ -439,12 +474,13 @@ class _PostActions extends StatelessWidget {
             final p = _live(Get.find<FeedController>());
             return GestureDetector(
               onTap: () => Get.find<FeedController>().toggleSave(postId),
+              behavior: HitTestBehavior.opaque,
               child: Padding(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                 child: Icon(
                   p.isSaved ? Icons.bookmark : Icons.bookmark_outline,
                   size: 25,
-                  color: p.isSaved ? const Color(0xFF3797F0) : Colors.black,
+                  color: p.isSaved ? AppColors.save : Colors.black,
                 ),
               ),
             );
@@ -470,20 +506,24 @@ class _Btn extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 26, color: Colors.black),
-          if (label.isNotEmpty) ...[
-            const SizedBox(width: 5),
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                    fontFamily: 'Roboto')),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 26, color: Colors.black),
+            if (label.isNotEmpty) ...[
+              const SizedBox(width: 5),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                      fontFamily: 'Roboto')),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

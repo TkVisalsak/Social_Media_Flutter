@@ -28,8 +28,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       case 0:
         Get.find<FeedController>().fetchFeed(refresh: true, silent: true);
         Get.find<StoryFeedController>().fetch();
+      case 1:
+        // Tapping the Reels icon while already on Reels refreshes the feed,
+        // just like TikTok.
+        Get.find<ShortsController>().fetchShorts();
       case 3:
         Get.find<DirectController>().fetchConversations(refresh: true);
+        Get.find<StoryFeedController>().fetch();
       case 4:
         Get.find<ProfileController>().reload();
     }

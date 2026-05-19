@@ -11,7 +11,7 @@ class AppConfig {
 
   // ── Local dev ──────────────────────────────────────────────────────────────
   // Your machine's LAN IP: run `hostname -I | awk '{print $1}'` to get it.
-  static const String _localIp   = 'localhost';
+  static const String _localIp   = '192.168.0.105';
   static const String _localPort = '5001';
 
   // ── Production ─────────────────────────────────────────────────────────────

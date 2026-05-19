@@ -6,7 +6,7 @@ class ShortModel {
     required this.id,
     required this.user,
     required this.videoUrl,
-    this.thumbnailUrl,
+    String? thumbnailUrl,
     this.caption,
     this.likeCount = 0,
     this.commentCount = 0,
@@ -19,12 +19,25 @@ class ShortModel {
     this.isLiked = false,
     this.isSaved = false,
     required this.createdAt,
-  });
+  }) : _thumbnailUrl = thumbnailUrl;
 
   final String id;
   final UserModel user;
   final String videoUrl;
-  final String? thumbnailUrl;
+  final String? _thumbnailUrl;
+
+  /// Thumbnail URL. Falls back to a Cloudinary first-frame derivation when the
+  /// server hasn't stored one (e.g. shorts uploaded before the fix).
+  String? get thumbnailUrl {
+    if (_thumbnailUrl != null && _thumbnailUrl.isNotEmpty) return _thumbnailUrl;
+    if (videoUrl.isEmpty || !videoUrl.contains('cloudinary.com')) return null;
+    return videoUrl
+        .replaceFirst('/video/upload/', '/video/upload/so_0/')
+        .replaceFirstMapped(
+          RegExp(r'\.(mp4|mov|avi|mkv|webm)$', caseSensitive: false),
+          (_) => '.jpg',
+        );
+  }
   final String? caption;
   final int likeCount;
   final int commentCount;

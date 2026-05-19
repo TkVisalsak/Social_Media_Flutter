@@ -44,8 +44,12 @@ class ShortsController extends GetxController {
   }
 
   /// Switch between FYP and Friends feeds.
+  /// Tapping the already-active tab acts as a refresh (like TikTok).
   void switchFeed(String feed) {
-    if (selectedFeed.value == feed) return;
+    if (selectedFeed.value == feed) {
+      fetchShorts(); // same feed — treat as refresh
+      return;
+    }
     selectedFeed.value = feed;
     fetchShorts();
   }

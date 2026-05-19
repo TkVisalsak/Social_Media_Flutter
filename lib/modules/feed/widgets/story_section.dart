@@ -96,7 +96,12 @@ class StorySection extends GetWidget<StoryFeedController> {
                 userIndex: 0,
               )
             else
-              const CurrentUserStoryItem(),
+              CurrentUserStoryItem(
+                imagePath: controller.myProfilePic.value.isNotEmpty
+                    ? controller.myProfilePic.value
+                    : null,
+                isNetworkImage: true,
+              ),
             ...List.generate(viewerUsers.length, (i) {
               final vu = viewerUsers[i];
               return StoryItem(

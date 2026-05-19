@@ -17,6 +17,9 @@ class StoryFeedController extends GetxController {
   String _myUserId = '';
   String get myUserId => _myUserId;
 
+  final myProfilePic = ''.obs;
+  final myUsername   = ''.obs;
+
   /// Group stories by user so the bar shows one avatar per user.
   List<List<StoryModel>> get groupedByUser {
     final byUser = <String, List<StoryModel>>{};
@@ -35,7 +38,9 @@ class StoryFeedController extends GetxController {
 
   Future<void> _loadMyUserId() async {
     final me = await LocalStorage.user;
-    _myUserId = me?.id ?? '';
+    _myUserId         = me?.id ?? '';
+    myProfilePic.value = me?.profilePic ?? '';
+    myUsername.value   = me?.username ?? me?.fullName ?? '';
   }
 
   Future<bool> createStory({

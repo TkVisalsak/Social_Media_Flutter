@@ -18,5 +18,6 @@ abstract class AppColors {
   static const Color accent      = Color(0xFF3797F0);
   static const Color primaryBlue = Color(0xFF0095F6);
   static const Color online      = Color(0xFF22C55E);
-  static const Color repost      = Color(0xFF00BA7C);
+  static const Color repost      = Color(0xFFFFD700);
+  static const Color save        = Color(0xFFFFD700);
 }

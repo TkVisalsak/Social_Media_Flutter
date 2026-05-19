@@ -55,7 +55,6 @@ class AppPages {
       page:    () => const RegisterView(),
       binding: AuthBinding(),
     ),
-
     // ── Onboarding ────────────────────────────────────
     GetPage(
       name:        AppRoutes.ONBOARDING_DOB,
@@ -116,7 +115,6 @@ class AppPages {
     GetPage(
       name:        AppRoutes.EDIT_PROFILE,
       page:        () => const EditProfileView(),
-      binding:     ProfileBinding(),
       middlewares: [AuthMiddleware()],
     ),
 

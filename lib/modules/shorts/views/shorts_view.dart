@@ -65,14 +65,19 @@ class _ReelPageViewState extends State<_ReelPageView> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(() => PageView.builder(
-      scrollDirection: Axis.vertical,
-      itemCount: widget.controller.shorts.length,
-      onPageChanged: (i) => setState(() => _currentIndex = i),
-      itemBuilder: (_, i) => ReelItem(
-        key: ValueKey(widget.controller.shorts[i].id),
-        short: widget.controller.shorts[i],
-        isActive: i == _currentIndex,
+    return Obx(() => RefreshIndicator(
+      color: Colors.white,
+      backgroundColor: Colors.black54,
+      onRefresh: widget.controller.fetchShorts,
+      child: PageView.builder(
+        scrollDirection: Axis.vertical,
+        itemCount: widget.controller.shorts.length,
+        onPageChanged: (i) => setState(() => _currentIndex = i),
+        itemBuilder: (_, i) => ReelItem(
+          key: ValueKey(widget.controller.shorts[i].id),
+          short: widget.controller.shorts[i],
+          isActive: i == _currentIndex,
+        ),
       ),
     ));
   }

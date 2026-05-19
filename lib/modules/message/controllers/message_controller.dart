@@ -17,6 +17,8 @@ class DirectController extends GetxController {
   final isLoading      = false.obs;
   final error          = RxnString();
   final myUserId       = RxnString();
+  final myProfilePic   = RxnString();
+  final myUsername     = RxnString();
   final onlineUserIds  = <String>{}.obs;
 
   StreamSubscription<List<String>>?           _onlineSub;
@@ -45,7 +47,9 @@ class DirectController extends GetxController {
 
   Future<void> _loadMe() async {
     final me = await LocalStorage.user;
-    myUserId.value = me?.id;
+    myUserId.value    = me?.id;
+    myProfilePic.value = me?.profilePic;
+    myUsername.value   = me?.username ?? me?.fullName;
   }
 
   Future<void> fetchConversations({bool refresh = false}) async {

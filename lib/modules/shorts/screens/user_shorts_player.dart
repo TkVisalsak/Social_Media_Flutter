@@ -48,25 +48,28 @@ class _UserShortsPlayerState extends State<UserShortsPlayer> {
     _currentIndex = widget.initialIndex;
 
     if (Get.isRegistered<ShortsController>()) {
-      // Global controller exists — borrow it temporarily.
-      final ctrl = Get.find<ShortsController>();
-      _originalShorts = ctrl.shorts.toList();
-      ctrl.shorts.assignAll(widget.shorts);
-      ctrl.isTabVisible(true);
+      // Save originals synchronously — no reactive side-effects.
+      _originalShorts = Get.find<ShortsController>().shorts.toList();
     } else {
-      // No global controller — create a temporary one.
-      // skipInitialFetch prevents fetchShorts() from racing with and
-      // overwriting the shorts list we are about to assign below.
+      // Create the temporary controller now (non-reactive) so ReelItem can
+      // find it during its own build.
       Get.put(ShortsController(
         Get.find<ShortRepository>(),
         Get.find<FollowRepository>(),
         skipInitialFetch: true,
       ));
       _createdTempCtrl = true;
+    }
+
+    // Defer the reactive writes so they don't fire while the route's internal
+    // Builder widget is still mid-build (which triggers markNeedsBuild on Obx
+    // widgets elsewhere in the tree, e.g. ShortsView in the IndexedStack).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final ctrl = Get.find<ShortsController>();
       ctrl.shorts.assignAll(widget.shorts);
       ctrl.isTabVisible(true);
-    }
+    });
   }
 
   @override

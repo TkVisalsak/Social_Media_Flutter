@@ -24,9 +24,9 @@ class AnimatedNavBar extends StatefulWidget {
 }
 
 class _AnimatedNavBarState extends State<AnimatedNavBar> {
-  static const Color _accent = Color(0xFF5B4BFF);
-  static const Color _pillBg = Color(0xFFEAE6FF);
-  static const Color _inactive = Color(0xFF1A1A1A);
+  static const Color _accent   = Color(0xFF2AABEE);  // Telegram blue
+  static const Color _pillBg   = Color(0xFFEEEEEE);  // Telegram gray bubble
+  static const Color _inactive = Color(0xFF8E8E93);  // iOS system gray
 
   final List<GlobalKey> _itemKeys = [];
   final GlobalKey _rowKey = GlobalKey();

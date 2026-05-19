@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/feed_repository.dart';
 import '../../../data/repositories/follow_repository.dart';
+import '../../../data/repositories/repost_repository.dart';
 import '../../../data/repositories/save_repository.dart';
 import '../../../data/repositories/short_repository.dart';
 import '../controllers/profile_controller.dart';
@@ -17,7 +18,9 @@ class ProfileBinding extends Bindings {
         Get.find<ShortRepository>(),
         Get.find<SaveRepository>(),
         Get.find<FollowRepository>(),
+        Get.find<RepostRepository>(),
       ),
+      fenix: true,
     );
   }
 }

@@ -53,7 +53,7 @@ class SplashView extends GetView<SplashController> {
                 colors: [Color(0xFFE91E8C), Color(0xFF6C63FF)],
               ).createShader(bounds),
               child: const Text(
-                'Social app',
+                'TosChat',
                 style: TextStyle(
                   fontSize: 32,
                   fontWeight: FontWeight.w600,

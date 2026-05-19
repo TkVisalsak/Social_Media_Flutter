@@ -7,19 +7,24 @@ import 'package:get/get.dart';
 
 import '../../../core/services/socket_service.dart';
 import '../../../data/models/message_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/message_repository.dart';
 
 class ChatMessage {
-  final String id;
-  final String text;
-  final bool isMe;
-  final bool isImage;
+  final String  id;
+  final String  text;
+  final bool    isMe;
+  final bool    isImage;
+  final String? senderName;
+  final String? senderAvatar;
   ChatMessage({
     required this.id,
     required this.text,
     required this.isMe,
-    this.isImage = false,
+    this.isImage      = false,
+    this.senderName   ,
+    this.senderAvatar ,
   });
 }
 
@@ -38,6 +43,8 @@ class ChatViewController extends GetxController {
   final isSending         = false.obs;
   final isMutual          = true.obs;
   final canSend           = true.obs;
+  final isGroup           = false.obs;
+  final groupMembers      = <UserModel>[];
 
   String? _myId;
   String? _otherUserId;
@@ -61,6 +68,8 @@ class ChatViewController extends GetxController {
     _myId = me?.id;
 
     isMutual(c.isMutual);
+    isGroup(c.isGroup);
+    if (c.isGroup) groupMembers.addAll(c.members);
 
     if (c.isGroup) {
       displayName.value   = c.name ?? 'Group';
@@ -210,12 +219,17 @@ class ChatViewController extends GetxController {
 
   // ── Helpers ───────────────────────────────────────────────────
 
-  ChatMessage _toDisplay(MessageModel m) => ChatMessage(
-        id:      m.id,
-        text:    m.text ?? (m.image != null ? '📷 Photo' : ''),
-        isMe:    m.sender.id == _myId,
-        isImage: m.image != null && m.text == null,
-      );
+  ChatMessage _toDisplay(MessageModel m) {
+    final mine = m.sender.id == _myId;
+    return ChatMessage(
+      id:           m.id,
+      text:         m.text ?? (m.image != null ? '📷 Photo' : ''),
+      isMe:         mine,
+      isImage:      m.image != null && m.text == null,
+      senderName:   mine ? null : (m.sender.username ?? m.sender.fullName),
+      senderAvatar: mine ? null : m.sender.profilePic,
+    );
+  }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {

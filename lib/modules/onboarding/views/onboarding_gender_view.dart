@@ -42,9 +42,9 @@ class OnboardingGenderView extends GetView<OnboardingController> {
             ],
           ),
           const SizedBox(height: 20),
-          Obx(() => _CustomPill(
-                isActive: controller.gender.value == 'custom',
-                onTap: () => controller.gender('custom'),
+          Obx(() => _PreferNotToSayPill(
+                isActive: controller.gender.value == 'prefer_not_to_say',
+                onTap: () => controller.gender('prefer_not_to_say'),
               )),
           const SizedBox(height: 12),
           Obx(() => OnboardErrorText(message: controller.error.value)),
@@ -114,32 +114,76 @@ class _GenderCircle extends StatelessWidget {
   }
 }
 
-class _CustomPill extends StatelessWidget {
-  const _CustomPill({required this.isActive, required this.onTap});
+class _PreferNotToSayPill extends StatelessWidget {
+  const _PreferNotToSayPill({required this.isActive, required this.onTap});
   final bool isActive;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor:
-              isActive ? const Color(0xFFCBD5E1) : const Color(0xFFE2E8F0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFEEF2FF) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isActive ? const Color(0xFF4F46E5) : const Color(0xFFE2E8F0),
+            width: 1.5,
           ),
-          elevation: 0,
         ),
-        child: const Text(
-          'Custom',
-          style: TextStyle(
-            color: Color(0xFF0F172A),
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? const Color(0xFF4F46E5).withValues(alpha: 0.12)
+                    : const Color(0xFFE2E8F0),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.do_not_disturb_alt_rounded,
+                size: 22,
+                color: isActive
+                    ? const Color(0xFF4F46E5)
+                    : const Color(0xFF94A3B8),
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Prefer not to say',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: isActive
+                          ? const Color(0xFF4F46E5)
+                          : const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text(
+                    'Your privacy is important to us',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isActive)
+              const Icon(Icons.check_circle_rounded,
+                  color: Color(0xFF4F46E5), size: 22),
+          ],
         ),
       ),
     );

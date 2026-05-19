@@ -86,7 +86,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   // ── Computed ─────────────────────────────────────────────────────────────────
 
-  bool get _canPost => _textCtrl.text.trim().isNotEmpty || _images.isNotEmpty;
+  bool get _canPost => _images.isNotEmpty;
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 

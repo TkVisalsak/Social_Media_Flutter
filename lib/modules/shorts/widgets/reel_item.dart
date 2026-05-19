@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../app/routes/app_routes.dart';
+import '../../../core/services/repost_store.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/repost_model.dart';
 import '../../../data/models/short_model.dart';
@@ -45,6 +46,7 @@ class _ReelItemState extends State<ReelItem> {
   bool       _isOwnVideo    = false;
   Timer?  _tapTimer;
   Worker? _visibilityWorker;
+  Worker? _repostWorker;
 
   // ── Video lifecycle ───────────────────────────────────────────
 
@@ -52,6 +54,7 @@ class _ReelItemState extends State<ReelItem> {
   void initState() {
     super.initState();
     _initVideo();
+    _initRepostState();
     _visibilityWorker = ever(
       Get.find<ShortsController>().isTabVisible,
       (bool visible) {
@@ -65,6 +68,24 @@ class _ReelItemState extends State<ReelItem> {
     );
     _loadFollowStatus();
     _detectOwnVideo();
+  }
+
+  void _initRepostState() {
+    _syncFromStore();
+    if (Get.isRegistered<RepostStore>()) {
+      _repostWorker = ever(Get.find<RepostStore>().version, (_) {
+        if (mounted && !_repostLoading) _syncFromStore();
+      });
+    }
+  }
+
+  void _syncFromStore() {
+    if (!Get.isRegistered<RepostStore>()) return;
+    final store = Get.find<RepostStore>();
+    setState(() {
+      _isReposted = store.isReposted(widget.short.id);
+      _repostId   = store.repostDocId(widget.short.id);
+    });
   }
 
   void _initVideo() {
@@ -99,6 +120,7 @@ class _ReelItemState extends State<ReelItem> {
   @override
   void dispose() {
     _visibilityWorker?.dispose();
+    _repostWorker?.dispose();
     _tapTimer?.cancel();
     _ctrl?.removeListener(_onVideoStateChange);
     _ctrl?.dispose();
@@ -156,6 +178,9 @@ class _ReelItemState extends State<ReelItem> {
       if (_repostId != null) {
         final res = await Get.find<RepostRepository>().deleteRepost(_repostId!);
         if (res.success) {
+          if (Get.isRegistered<RepostStore>()) {
+            Get.find<RepostStore>().remove(widget.short.id);
+          }
           setState(() {
             _isReposted = false;
             _repostId   = null;
@@ -169,6 +194,9 @@ class _ReelItemState extends State<ReelItem> {
         contentType: RepostContentType.short,
       );
       if (res.success && res.data != null) {
+        if (Get.isRegistered<RepostStore>()) {
+          Get.find<RepostStore>().add(widget.short.id, res.data!.id);
+        }
         setState(() {
           _isReposted  = true;
           _repostId    = res.data!.id;
@@ -341,7 +369,7 @@ class _ReelItemState extends State<ReelItem> {
   @override
   Widget build(BuildContext context) {
     final bottomPad     = MediaQuery.of(context).padding.bottom;
-    final contentBottom = bottomPad + widget.navBarH + 12;
+    final contentBottom = bottomPad + widget.navBarH + 4;
     final username      = widget.short.user.username ?? widget.short.user.fullName ?? 'user';
     final profilePic    = widget.short.user.profilePic;
 
@@ -565,10 +593,25 @@ class _ReelItemState extends State<ReelItem> {
   }
 
   Widget _buildVideoLayer() {
+    final thumb = widget.short.thumbnailUrl;
+
     if (_ctrl == null || !_ctrl!.value.isInitialized) {
-      return const Center(
-        child: CircularProgressIndicator(
-            color: Colors.white38, strokeWidth: 1.5),
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          if (thumb != null && thumb.isNotEmpty)
+            Image.network(
+              thumb,
+              fit: BoxFit.cover,
+              errorBuilder: (context, err, stack) => const ColoredBox(color: Colors.black),
+            )
+          else
+            const ColoredBox(color: Colors.black),
+          const Center(
+            child: CircularProgressIndicator(
+                color: Colors.white38, strokeWidth: 1.5),
+          ),
+        ],
       );
     }
     return SizedBox.expand(

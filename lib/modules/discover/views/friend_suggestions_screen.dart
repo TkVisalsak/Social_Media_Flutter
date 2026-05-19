@@ -98,7 +98,7 @@ class _SuggestionsRow extends StatelessWidget {
           itemCount: users.length,
           separatorBuilder: (_, __) => const SizedBox(width: 12),
           itemBuilder: (context, index) {
-            return _SuggestionCard(user: users[index]);
+            return _SuggestionCard(user: users[index], controller: controller);
           },
         ),
       );
@@ -108,12 +108,14 @@ class _SuggestionsRow extends StatelessWidget {
 
 class _SuggestionCard extends StatelessWidget {
   final UserModel user;
-  const _SuggestionCard({required this.user});
+  final FriendSuggestionsController controller;
+  const _SuggestionCard({required this.user, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     final name = user.fullName ?? user.username ?? 'Unknown';
     return GestureDetector(
+      // Tap the card (avatar/name area) → open profile
       onTap: () => Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: user),
       child: SizedBox(
         width: 100,
@@ -146,21 +148,35 @@ class _SuggestionCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            SizedBox(
-              height: 28,
-              child: ElevatedButton(
-                onPressed: () => Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: user),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue[600],
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
+            // Stop the GestureDetector above from firing when tapping the button
+            GestureDetector(
+              onTap: () {}, // absorbs the tap so card nav doesn't fire
+              child: Obx(() {
+                final followed = controller.followedIds.contains(user.id);
+                return SizedBox(
+                  height: 28,
+                  child: ElevatedButton(
+                    onPressed: followed
+                        ? null
+                        : () => controller.followUser(user.id),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          followed ? Colors.grey[300] : Colors.blue[600],
+                      foregroundColor:
+                          followed ? Colors.black54 : Colors.white,
+                      disabledBackgroundColor: Colors.grey[300],
+                      disabledForegroundColor: Colors.black54,
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      textStyle: const TextStyle(
+                          fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                    child: Text(followed ? 'Following' : 'Follow'),
                   ),
-                  textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-                child: const Text('Follow'),
-              ),
+                );
+              }),
             ),
           ],
         ),

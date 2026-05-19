@@ -11,10 +11,6 @@ class OnboardingFriendsView extends GetView<OnboardingController> {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.suggestions.isEmpty && !controller.isLoading.value) {
-      controller.loadSuggestions();
-    }
-
     return OnboardScaffold(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,10 +28,8 @@ class OnboardingFriendsView extends GetView<OnboardingController> {
               ),
             ),
           ),
-          _ContactsRow(),
-          const SizedBox(height: 16),
           Obx(() {
-            if (controller.isLoading.value &&
+            if (controller.isSuggestionsLoading.value &&
                 controller.suggestions.isEmpty) {
               return const Center(child: Padding(
                 padding: EdgeInsets.all(24),
@@ -76,64 +70,6 @@ class OnboardingFriendsView extends GetView<OnboardingController> {
               'Skip for now',
               style: TextStyle(color: Color(0xFF64748B)),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContactsRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF1F5F9),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: const Icon(Icons.phone, size: 18, color: Color(0xFF64748B)),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Connect Contacts',
-                  style: TextStyle(
-                    color: Color(0xFF2563EB),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  'Follow people you know',
-                  style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-            ),
-            child: const Text('Connect'),
           ),
         ],
       ),

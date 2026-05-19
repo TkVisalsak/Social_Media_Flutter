@@ -95,15 +95,6 @@ class LoginView extends GetView<AuthController> {
                     isLoading: controller.isLoading.value,
                     onTap: controller.login,
                   )),
-              const SizedBox(height: 20),
-              // Divider
-              const OrDivider(),
-              const SizedBox(height: 20),
-              // Google button
-              GoogleButton(
-                label: 'Sign in with Google',
-                onTap: controller.loginWithGoogle,
-              ),
               const SizedBox(height: 40),
               // Sign up link
               Center(

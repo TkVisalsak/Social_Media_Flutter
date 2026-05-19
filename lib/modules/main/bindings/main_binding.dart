@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
 
+import '../../../core/services/repost_store.dart';
 import '../../../core/services/socket_service.dart';
 import '../../../data/repositories/highlight_repository.dart';
+import '../../../data/repositories/repost_repository.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../feed/bindings/feed_binding.dart';
 import '../../message/bindings/message_binding.dart';
@@ -29,6 +31,11 @@ class MainBinding extends Bindings {
 
     Get.lazyPut<HighlightsController>(
       () => HighlightsController(Get.find<HighlightRepository>()),
+      fenix: true,
+    );
+
+    Get.lazyPut<RepostStore>(
+      () => RepostStore(Get.find<RepostRepository>()),
       fenix: true,
     );
 

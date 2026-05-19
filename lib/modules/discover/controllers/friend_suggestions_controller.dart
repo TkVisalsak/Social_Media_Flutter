@@ -10,9 +10,10 @@ class FriendSuggestionsController extends GetxController {
 
   FriendSuggestionsController(this._hobbyRepo, this._followRepo);
 
-  final suggestions = <UserModel>[].obs;
+  final suggestions      = <UserModel>[].obs;
   final notFollowingBack = <UserModel>[].obs;
-  final isLoading = false.obs;
+  final followedIds      = <String>{}.obs; // tracks optimistic follow taps
+  final isLoading        = false.obs;
 
   @override
   void onInit() {
@@ -42,9 +43,12 @@ class FriendSuggestionsController extends GetxController {
   }
 
   Future<void> followUser(String userId) async {
+    followedIds.add(userId); // optimistic
     final res = await _followRepo.follow(userId);
     if (res.success) {
       notFollowingBack.removeWhere((u) => u.id == userId);
+    } else {
+      followedIds.remove(userId); // revert on failure
     }
   }
 

@@ -3,11 +3,10 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../data/models/message_model.dart';
-import '../../../shared/widgets/story_avatar.dart';
 import '../../feed/controllers/story_feed_controller.dart';
+import '../../feed/widgets/story_item.dart';
 import '../../story/models/story_viewer_item.dart';
 import '../../story/models/story_viewer_user.dart';
-import '../../story/views/story_viewer_screen.dart';
 import '../controllers/message_controller.dart';
 import '../screens/new_message_screen.dart';
 import '../widgets/chat_message_tile.dart';
@@ -69,13 +68,24 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
           child: Row(
             children: [
               Obx(() {
-                final me = widget.controller.myUserId.value;
+                final pic  = widget.controller.myProfilePic.value;
+                final name = widget.controller.myUsername.value ?? '';
                 return CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[300],
-                  child: me != null
-                      ? null
-                      : const Icon(Icons.person, color: Colors.grey),
+                  backgroundImage: pic != null && pic.isNotEmpty
+                      ? NetworkImage(pic) as ImageProvider
+                      : null,
+                  child: pic == null || pic.isEmpty
+                      ? Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Colors.white,
+                          ),
+                        )
+                      : null,
                 );
               }),
               const SizedBox(width: 12),
@@ -164,16 +174,46 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
   }
 }
 
-// ─── Friends story bar ─────────────────────────────────────────────────────────
+// ─── Friends story bar — same layout as feed StorySection + "Your Story" ──────
 
 class _DirectStoryBar extends StatelessWidget {
   const _DirectStoryBar();
 
   static String _timeAgo(DateTime t) {
     final d = DateTime.now().difference(t);
+    if (d.inDays >= 1) return '${d.inDays}d';
     if (d.inHours >= 1) return '${d.inHours}h';
     if (d.inMinutes >= 1) return '${d.inMinutes}m';
     return 'now';
+  }
+
+  StoryViewerUser? _buildMyUser(StoryFeedController ctrl) {
+    final myId = ctrl.myUserId;
+    if (myId.isEmpty) return null;
+    final myGroups = ctrl.groupedByUser
+        .where((g) => g.first.user.id == myId)
+        .toList();
+    if (myGroups.isEmpty) return null;
+    final myStories = myGroups.first;
+    final first = myStories.first;
+    final pic = first.user.profilePic ?? '';
+    return StoryViewerUser(
+      userId: first.user.id,
+      username: first.user.username ?? first.user.fullName ?? 'You',
+      profileImage: pic,
+      isNetworkImage: pic.startsWith('http'),
+      stories: myStories
+          .expand((s) => s.mediaUrl.map((m) => StoryViewerItem(
+                storyId: s.id,
+                type: m.type == 'video'
+                    ? StoryViewerType.video
+                    : StoryViewerType.image,
+                media: m.url,
+                isNetwork: m.url.startsWith('http'),
+                time: _timeAgo(s.createdAt),
+              )))
+          .toList(),
+    );
   }
 
   List<StoryViewerUser> _buildViewerUsers(StoryFeedController ctrl) {
@@ -181,14 +221,12 @@ class _DirectStoryBar extends StatelessWidget {
         .where((g) => g.first.user.id != ctrl.myUserId)
         .map((userStories) {
           final first = userStories.first;
-          final username =
-              first.user.username ?? first.user.fullName ?? 'user';
-          final profilePic = first.user.profilePic ?? '';
+          final pic = first.user.profilePic ?? '';
           return StoryViewerUser(
             userId: first.user.id,
-            username: username,
-            profileImage: profilePic,
-            isNetworkImage: profilePic.startsWith('http'),
+            username: first.user.username ?? first.user.fullName ?? 'user',
+            profileImage: pic,
+            isNetworkImage: pic.startsWith('http'),
             stories: userStories
                 .expand((s) => s.mediaUrl.map((m) => StoryViewerItem(
                       storyId: s.id,
@@ -211,118 +249,77 @@ class _DirectStoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Guard: controller must be registered (by DirectBinding)
     if (!Get.isRegistered<StoryFeedController>()) return const SizedBox();
-
     final ctrl = Get.find<StoryFeedController>();
 
     return Obx(() {
       if (ctrl.isLoading.value && ctrl.stories.isEmpty) {
         return const SizedBox(
-          height: 96,
+          height: 110,
           child: Center(
-            child: SizedBox(
-              width: 20, height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            child: SizedBox(width: 20, height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2)),
           ),
         );
       }
 
+      final myUser      = _buildMyUser(ctrl);
       final viewerUsers = _buildViewerUsers(ctrl);
-      if (viewerUsers.isEmpty) return const SizedBox();
+
+      // Always show the bar (at minimum "Your story" creation button).
+      final allUsers = myUser != null ? [myUser, ...viewerUsers] : viewerUsers;
 
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            height: 96,
-            child: ListView.builder(
+            height: 110,
+            child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              itemCount: viewerUsers.length,
-              itemBuilder: (context, i) {
-                final vu = viewerUsers[i];
-                return _StoryBubble(
-                  user: vu,
-                  allUsers: viewerUsers,
-                  index: i,
-                );
-              },
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                // ── Your story ─────────────────────────────────
+                if (myUser != null)
+                  StoryItem(
+                    username: 'Your story',
+                    imageUrl: myUser.profileImage.isNotEmpty
+                        ? myUser.profileImage
+                        : null,
+                    isNetworkImage: myUser.isNetworkImage,
+                    hasStory: true,
+                    isCurrentUser: true,
+                    isViewed: myUser.viewed,
+                    allUsers: allUsers,
+                    userIndex: 0,
+                  )
+                else
+                  CurrentUserStoryItem(
+                    imagePath: ctrl.myProfilePic.value.isNotEmpty
+                        ? ctrl.myProfilePic.value
+                        : null,
+                    isNetworkImage: true,
+                  ),
+
+                // ── Friends' stories ───────────────────────────
+                ...List.generate(viewerUsers.length, (i) {
+                  final vu = viewerUsers[i];
+                  return StoryItem(
+                    username: vu.username,
+                    imageUrl: vu.profileImage.isNotEmpty
+                        ? vu.profileImage
+                        : null,
+                    isNetworkImage: vu.isNetworkImage,
+                    hasStory: true,
+                    isViewed: vu.viewed,
+                    allUsers: allUsers,
+                    userIndex: myUser != null ? i + 1 : i,
+                  );
+                }),
+              ],
             ),
           ),
           const Divider(height: 1, thickness: 0.5),
         ],
       );
     });
-  }
-}
-
-// ─── Single story bubble (avatar + name) ──────────────────────────────────────
-
-class _StoryBubble extends StatelessWidget {
-  final StoryViewerUser       user;
-  final List<StoryViewerUser> allUsers;
-  final int                   index;
-
-  const _StoryBubble({
-    required this.user,
-    required this.allUsers,
-    required this.index,
-  });
-
-  void _openStory(BuildContext context) {
-    if (allUsers.isEmpty) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => StoryViewerScreen(
-          users: allUsers,
-          initialUserIndex: index.clamp(0, allUsers.length - 1),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _openStory(context),
-      child: Padding(
-        padding: const EdgeInsets.only(right: 16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            StoryAvatar(
-              imagePath: user.profileImage.isNotEmpty
-                  ? user.profileImage
-                  : null,
-              isNetworkImage: user.isNetworkImage,
-              username: user.username,
-              radius: 26,
-              hasRing: true,
-              isViewed: user.viewed,
-            ),
-            const SizedBox(height: 5),
-            SizedBox(
-              width: 60,
-              child: Text(
-                user.username,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: user.viewed
-                      ? Colors.grey
-                      : Colors.black,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

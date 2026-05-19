@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../controllers/chat_view_controller.dart';
 import '../controllers/message_controller.dart';
+import 'group_info_screen.dart';
 
 class ChatView extends StatelessWidget {
   const ChatView({super.key});
@@ -24,14 +25,16 @@ class ChatView extends StatelessWidget {
         title: Obx(() {
           final avatar = ctrl.displayAvatar.value;
           final name = ctrl.displayName.value;
+          final group = ctrl.isGroup.value;
           final directCtrl = Get.isRegistered<DirectController>()
               ? Get.find<DirectController>()
               : null;
           final otherId = ctrl.otherUserId ?? '';
-          final online = directCtrl != null && otherId.isNotEmpty
+          final online = !group && directCtrl != null && otherId.isNotEmpty
               ? directCtrl.onlineUserIds.contains(otherId)
               : false;
-          return Row(
+
+          final row = Row(
             children: [
               Stack(
                 children: [
@@ -72,12 +75,28 @@ class ChatView extends StatelessWidget {
                           color: Colors.black,
                           fontSize: 14,
                           fontWeight: FontWeight.bold)),
-                  const Text('Active now',
-                      style: TextStyle(color: Colors.grey, fontSize: 11)),
+                  Text(
+                    group
+                        ? '${ctrl.groupMembers.length} members'
+                        : 'Active now',
+                    style:
+                        const TextStyle(color: Colors.grey, fontSize: 11)),
                 ],
               ),
             ],
           );
+
+          // Tapping avatar/name opens group info for group chats.
+          if (group) {
+            return GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GroupInfoScreen()),
+              ),
+              child: row,
+            );
+          }
+          return row;
         }),
         actions: [
           IconButton(
@@ -107,7 +126,10 @@ class ChatView extends StatelessWidget {
                 itemCount: ctrl.messages.length,
                 itemBuilder: (context, index) {
                   final msg = ctrl.messages[index];
-                  return _buildMessage(msg.text, msg.isMe);
+                  return _buildMessage(
+                    msg,
+                    showSender: ctrl.isGroup.value,
+                  );
                 },
               );
             }),
@@ -118,21 +140,85 @@ class ChatView extends StatelessWidget {
     );
   }
 
-  Widget _buildMessage(String text, bool isMe) {
+  Widget _buildMessage(ChatMessage msg, {required bool showSender}) {
+    final isMe = msg.isMe;
+
+    // For group chats, prepend avatar + name to received messages.
+    if (showSender && !isMe) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Sender avatar — radius 20 keeps visual weight proportional to bubble
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey[300],
+              backgroundImage: msg.senderAvatar != null &&
+                      msg.senderAvatar!.isNotEmpty
+                  ? NetworkImage(msg.senderAvatar!) as ImageProvider
+                  : null,
+              child: msg.senderAvatar == null || msg.senderAvatar!.isEmpty
+                  ? Text(
+                      (msg.senderName ?? '?').isNotEmpty
+                          ? (msg.senderName!)[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.bold),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (msg.senderName != null && msg.senderName!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 2),
+                    child: Text(
+                      msg.senderName!,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
+                  constraints:
+                      BoxConstraints(maxWidth: Get.width * 0.60),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFEFEF),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Text(msg.text,
+                      style: const TextStyle(
+                          color: Colors.black, fontSize: 15)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
+    // DM or own message — original simple bubble.
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         constraints: BoxConstraints(maxWidth: Get.width * 0.7),
         decoration: BoxDecoration(
           color: isMe ? const Color(0xFF3797F0) : const Color(0xFFEFEFEF),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          text,
-          style:
-              TextStyle(color: isMe ? Colors.white : Colors.black, fontSize: 15),
+          msg.text,
+          style: TextStyle(
+              color: isMe ? Colors.white : Colors.black, fontSize: 15),
         ),
       ),
     );

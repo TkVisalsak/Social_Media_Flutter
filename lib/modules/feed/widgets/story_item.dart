@@ -84,7 +84,13 @@ class StoryItem extends StatelessWidget {
 }
 
 class CurrentUserStoryItem extends StatelessWidget {
-  const CurrentUserStoryItem({super.key});
+  final String? imagePath;
+  final bool    isNetworkImage;
+  const CurrentUserStoryItem({
+    super.key,
+    this.imagePath,
+    this.isNetworkImage = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +100,13 @@ class CurrentUserStoryItem extends StatelessWidget {
         padding: const EdgeInsets.only(right: 12),
         child: Column(
           children: [
-            const StoryAvatar(username: 'You', radius: 30, showAddBadge: true),
+            StoryAvatar(
+              imagePath:      imagePath,
+              isNetworkImage: isNetworkImage,
+              username:       'You',
+              radius:         30,
+              showAddBadge:   true,
+            ),
             const SizedBox(height: 8),
             const SizedBox(
               width: 72,

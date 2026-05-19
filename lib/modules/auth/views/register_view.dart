@@ -175,13 +175,6 @@ class RegisterView extends GetView<AuthController> {
                     isLoading: controller.isLoading.value,
                     onTap: controller.register,
                   )),
-              const SizedBox(height: 20),
-              const OrDivider(),
-              const SizedBox(height: 20),
-              GoogleButton(
-                label: 'Sign Up with Google',
-                onTap: controller.loginWithGoogle,
-              ),
               const SizedBox(height: 40),
               Center(
                 child: GestureDetector(

@@ -7,23 +7,26 @@ import '../../../app/routes/app_routes.dart';
 import '../../../core/middlewares/auth_middleware.dart';
 import '../../../core/services/socket_service.dart';
 import '../../../data/models/post_model.dart';
+import '../../../data/models/repost_model.dart';
 import '../../../data/models/save_model.dart';
 import '../../../data/models/short_model.dart';
 import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/auth_repository.dart';
 import '../../../data/repositories/feed_repository.dart';
 import '../../../data/repositories/follow_repository.dart';
+import '../../../data/repositories/repost_repository.dart';
 import '../../../data/repositories/save_repository.dart';
 import '../../../data/repositories/short_repository.dart';
 
 class ProfileController extends GetxController {
-  final AuthRepository  _authRepo;
-  final FeedRepository  _feedRepo;
-  final ShortRepository _shortRepo;
-  final SaveRepository  _saveRepo;
+  final AuthRepository   _authRepo;
+  final FeedRepository   _feedRepo;
+  final ShortRepository  _shortRepo;
+  final SaveRepository   _saveRepo;
   final FollowRepository _followRepo;
+  final RepostRepository _repostRepo;
 
-  ProfileController(this._authRepo, this._feedRepo, this._shortRepo, this._saveRepo, this._followRepo);
+  ProfileController(this._authRepo, this._feedRepo, this._shortRepo, this._saveRepo, this._followRepo, this._repostRepo);
 
   final _picker = ImagePicker();
 
@@ -40,6 +43,9 @@ class ProfileController extends GetxController {
 
   final myPosts          = <PostModel>[].obs;
   final myShorts         = <ShortModel>[].obs;
+  final myReposts        = <RepostModel>[].obs;
+  // contentId → PostModel for feed-type reposts (populated in _loadContent)
+  final repostPostCache  = <String, PostModel>{};
   final likedPosts       = <PostModel>[].obs;
   final savedPosts       = <PostModel>[].obs;
   final isContentLoading = false.obs;
@@ -73,9 +79,10 @@ class ProfileController extends GetxController {
   Future<void> _loadContent() async {
     isContentLoading(true);
 
-    // Fetch posts, shorts, liked, saved, followers, and following concurrently
+    // Fetch posts, shorts, reposts, liked, saved, followers, and following concurrently
     final postsF      = _feedRepo.getUserPosts(_userId!);
     final shortsF     = _shortRepo.getByUser(_userId!);
+    final repostsF    = _repostRepo.getUserReposts(_userId!);
     final likedF      = _feedRepo.getLikedPosts(_userId!);
     final savedF      = _saveRepo.getSavedByUser(_userId!);
     final followersF  = _followRepo.getFollowers(_userId!);
@@ -83,6 +90,7 @@ class ProfileController extends GetxController {
 
     final postsRes     = await postsF;
     final shortsRes    = await shortsF;
+    final repostsRes   = await repostsF;
     final likedRes     = await likedF;
     final savedRes     = await savedF;
     final followersRes = await followersF;
@@ -94,10 +102,26 @@ class ProfileController extends GetxController {
     }
     if (shortsRes.success && shortsRes.data != null) {
       myShorts.assignAll(shortsRes.data!);
-    } else if (!shortsRes.success) {
-      Get.snackbar('Reels', shortsRes.error ?? 'Failed to load reels',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 3));
+    }
+    if (repostsRes.success && repostsRes.data != null) {
+      myReposts.assignAll(repostsRes.data!);
+      // Pre-fetch actual PostModel for each feed-type repost so the tab can
+      // show the post image and like/save buttons without per-tile requests.
+      final feedReposts = repostsRes.data!
+          .where((r) => r.contentType == RepostContentType.feed)
+          .toList();
+      if (feedReposts.isNotEmpty) {
+        final fetched = await Future.wait(
+          feedReposts.map((r) => _feedRepo.getPostById(r.contentId)),
+        );
+        repostPostCache.clear();
+        for (int i = 0; i < feedReposts.length; i++) {
+          final result = fetched[i];
+          if (result.success && result.data != null) {
+            repostPostCache[feedReposts[i].contentId] = result.data!;
+          }
+        }
+      }
     }
     if (likedRes.success && likedRes.data != null) {
       likedPosts.assignAll(likedRes.data!);

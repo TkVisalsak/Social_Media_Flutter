@@ -23,7 +23,7 @@ class HomeAppBar extends GetWidget<FeedController> {
           children: [
             const Expanded(
               child: Text(
-                'Social app',
+                'TosChat',
                 style: TextStyle(
                   fontSize: 32,
                   fontFamily: 'Cookie',

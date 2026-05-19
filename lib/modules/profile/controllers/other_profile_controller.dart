@@ -39,6 +39,8 @@ class OtherProfileController extends GetxController {
   final posts   = <PostModel>[].obs;
   final shorts  = <ShortModel>[].obs;
   final reposts = <RepostModel>[].obs;
+  // contentId → PostModel for feed-type reposts
+  final repostPostCache = <String, PostModel>{};
 
   final isFollowLoading  = false.obs;
   final isDmLoading      = false.obs;
@@ -78,7 +80,24 @@ class OtherProfileController extends GetxController {
           snackPosition: SnackPosition.BOTTOM,
           duration: const Duration(seconds: 3));
     }
-    if (results[5].success) reposts.assignAll(results[5].data as List<RepostModel>);
+    if (results[5].success) {
+      final rs = results[5].data as List<RepostModel>;
+      reposts.assignAll(rs);
+      // Pre-fetch post content for feed-type reposts
+      final feedRs = rs.where((r) => r.contentType == RepostContentType.feed).toList();
+      if (feedRs.isNotEmpty) {
+        final fetched = await Future.wait(
+          feedRs.map((r) => _feedRepo.getPostById(r.contentId)),
+        );
+        repostPostCache.clear();
+        for (int i = 0; i < feedRs.length; i++) {
+          final res = fetched[i];
+          if (res.success && res.data != null) {
+            repostPostCache[feedRs[i].contentId] = res.data!;
+          }
+        }
+      }
+    }
 
     isLoading(false);
   }
