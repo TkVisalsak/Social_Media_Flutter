@@ -66,6 +66,10 @@ class ProfileController extends GetxController {
     if (_userId != null) _loadContent();
   }
 
+  Future<void> reload() async {
+    if (_userId != null) _loadContent();
+  }
+
   Future<void> _loadContent() async {
     isContentLoading(true);
 

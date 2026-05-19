@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/user_model.dart';
+import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../controllers/feed_controller.dart';
 
@@ -344,10 +345,34 @@ class _AppBar extends StatelessWidget {
 
 // ─── User row ─────────────────────────────────────────────────────────────────
 
-class _UserRow extends StatelessWidget {
+class _UserRow extends StatefulWidget {
   final PostAudience audience;
   final VoidCallback onAudienceTap;
   const _UserRow({required this.audience, required this.onAudienceTap});
+
+  @override
+  State<_UserRow> createState() => _UserRowState();
+}
+
+class _UserRowState extends State<_UserRow> {
+  String  _username   = '';
+  String? _profilePic;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final me = await LocalStorage.user;
+    if (mounted && me != null) {
+      setState(() {
+        _username   = me.username ?? me.fullName ?? me.email.split('@').first;
+        _profilePic = me.profilePic;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -355,22 +380,30 @@ class _UserRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Row(
         children: [
-          const CircleAvatar(
-            radius:          22,
-            backgroundImage: AssetImage('assets/images/story1.jpg'),
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: Colors.grey[300],
+            backgroundImage: _profilePic != null && _profilePic!.isNotEmpty
+                ? NetworkImage(_profilePic!) as ImageProvider
+                : null,
+            child: _profilePic == null || _profilePic!.isEmpty
+                ? Text(
+                    _username.isNotEmpty ? _username[0].toUpperCase() : '?',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'TkVisalsak',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              Text(
+                _username,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
               ),
               const SizedBox(height: 4),
-              // Audience chip
               GestureDetector(
-                onTap: onAudienceTap,
+                onTap: widget.onAudienceTap,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
@@ -381,10 +414,10 @@ class _UserRow extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(audience.icon, size: 13, color: Colors.black87),
+                      Icon(widget.audience.icon, size: 13, color: Colors.black87),
                       const SizedBox(width: 5),
                       Text(
-                        audience.label,
+                        widget.audience.label,
                         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(width: 4),

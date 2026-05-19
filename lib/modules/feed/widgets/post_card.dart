@@ -142,43 +142,35 @@ class _PostCardState extends State<PostCard> {
         if (images.isNotEmpty)
           _PostImageSlider(images: images, onLike: _forceLike),
         const SizedBox(height: 10),
-        Obx(() {
-          final ctrl = Get.find<FeedController>();
-          final idx = ctrl.posts.indexWhere((p) => p.id == widget.post.id);
-          final livePost = idx >= 0 ? ctrl.posts[idx] : widget.post;
-          return Column(
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _PostActions(
-                      post: livePost,
-                      isReposted: _isReposted,
-                      isRepostLoading: _repostLoading,
-                      onToggleLike: _toggleLike,
-                      onComment: _openComments,
-                      onRepost: _toggleRepost,
-                      onShare: _openShare,
-                    ),
-                    const SizedBox(height: 12),
-                    _PostCaption(
-                      username: username,
-                      caption: caption,
-                      commentCount: livePost.commentsCount,
-                      timeAgo: _timeAgo(livePost.createdAt),
-                      onViewComments: _openComments,
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-                ),
+              _PostActions(
+                postId: widget.post.id,
+                fallbackPost: widget.post,
+                isReposted: _isReposted,
+                isRepostLoading: _repostLoading,
+                onToggleLike: _toggleLike,
+                onComment: _openComments,
+                onRepost: _toggleRepost,
+                onShare: _openShare,
               ),
-              Container(height: 1.2, color: AppColors.divider),
+              const SizedBox(height: 12),
+              _PostCaption(
+                postId: widget.post.id,
+                fallbackPost: widget.post,
+                username: username,
+                caption: caption,
+                timeAgo: _timeAgo(post.createdAt),
+                onViewComments: _openComments,
+              ),
+              const SizedBox(height: 14),
             ],
-          );
-        }),
+          ),
+        ),
+        Container(height: 1.2, color: AppColors.divider),
       ],
     );
   }
@@ -356,7 +348,8 @@ class _PostImageSliderState extends State<_PostImageSlider> {
 // ─── Actions row ─────────────────────────────────────────────────────────────
 
 class _PostActions extends StatelessWidget {
-  final PostModel    post;
+  final String       postId;
+  final PostModel    fallbackPost;
   final bool         isReposted;
   final bool         isRepostLoading;
   final VoidCallback onToggleLike;
@@ -365,7 +358,8 @@ class _PostActions extends StatelessWidget {
   final VoidCallback onShare;
 
   const _PostActions({
-    required this.post,
+    required this.postId,
+    required this.fallbackPost,
     required this.isReposted,
     required this.isRepostLoading,
     required this.onToggleLike,
@@ -380,52 +374,81 @@ class _PostActions extends StatelessWidget {
     return '$n';
   }
 
+  PostModel _live(FeedController ctrl) {
+    final idx = ctrl.posts.indexWhere((p) => p.id == postId);
+    return idx >= 0 ? ctrl.posts[idx] : fallbackPost;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2),
       child: Row(
         children: [
-          LikeButton(
-            isLiked: post.isLiked,
-            likeCount: post.likesCount,
-            onTap: (_) => onToggleLike(),
-            size: 26,
-            likedColor: AppColors.like,
-            unlikedColor: Colors.black,
-          ),
+          // ── Like ──────────────────────────────────────────
+          Obx(() {
+            final p = _live(Get.find<FeedController>());
+            return LikeButton(
+              isLiked: p.isLiked,
+              likeCount: p.likesCount,
+              onTap: (_) => onToggleLike(),
+              size: 26,
+              likedColor: AppColors.like,
+              unlikedColor: Colors.black,
+            );
+          }),
           const SizedBox(width: 8),
-          _Btn(
-            icon: Icons.chat_bubble_outline_rounded,
-            label: _fmt(post.commentsCount),
-            onTap: onComment,
-          ),
+          // ── Comment ───────────────────────────────────────
+          Obx(() {
+            final p = _live(Get.find<FeedController>());
+            return _Btn(
+              icon: Icons.chat_bubble_outline_rounded,
+              label: _fmt(p.commentsCount),
+              onTap: onComment,
+            );
+          }),
           const SizedBox(width: 8),
-          IgnorePointer(
-            ignoring: isRepostLoading,
-            child: RepostButton(
-              isReposted: isReposted,
-              repostCount: post.repostsCount,
-              onTap: (_) => onRepost(),
-              size: 22,
-              repostedColor: AppColors.repost,
-              unrepostedColor: Colors.black87,
-            ),
-          ),
-          const SizedBox(width: 8),
-          _Btn(icon: Icons.reply_rounded, label: _fmt(post.sharesCount), onTap: onShare),
-          const Spacer(),
-          GestureDetector(
-            onTap: () => Get.find<FeedController>().toggleSave(post.id),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                post.isSaved ? Icons.bookmark : Icons.bookmark_outline,
-                size: 25,
-                color: post.isSaved ? const Color(0xFF3797F0) : Colors.black,
+          // ── Repost ────────────────────────────────────────
+          Obx(() {
+            final p = _live(Get.find<FeedController>());
+            return IgnorePointer(
+              ignoring: isRepostLoading,
+              child: RepostButton(
+                isReposted: isReposted,
+                repostCount: p.repostsCount,
+                onTap: (_) => onRepost(),
+                size: 22,
+                repostedColor: AppColors.repost,
+                unrepostedColor: Colors.black87,
               ),
-            ),
-          ),
+            );
+          }),
+          const SizedBox(width: 8),
+          // ── Share ─────────────────────────────────────────
+          Obx(() {
+            final p = _live(Get.find<FeedController>());
+            return _Btn(
+              icon: Icons.reply_rounded,
+              label: _fmt(p.sharesCount),
+              onTap: onShare,
+            );
+          }),
+          const Spacer(),
+          // ── Save ──────────────────────────────────────────
+          Obx(() {
+            final p = _live(Get.find<FeedController>());
+            return GestureDetector(
+              onTap: () => Get.find<FeedController>().toggleSave(postId),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Icon(
+                  p.isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                  size: 25,
+                  color: p.isSaved ? const Color(0xFF3797F0) : Colors.black,
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -469,16 +492,18 @@ class _Btn extends StatelessWidget {
 // ─── Caption ─────────────────────────────────────────────────────────────────
 
 class _PostCaption extends StatelessWidget {
-  final String   username;
-  final String   caption;
-  final int      commentCount;
-  final String   timeAgo;
+  final String       postId;
+  final PostModel    fallbackPost;
+  final String       username;
+  final String       caption;
+  final String       timeAgo;
   final VoidCallback onViewComments;
 
   const _PostCaption({
+    required this.postId,
+    required this.fallbackPost,
     required this.username,
     required this.caption,
-    required this.commentCount,
     required this.timeAgo,
     required this.onViewComments,
   });
@@ -504,14 +529,23 @@ class _PostCaption extends StatelessWidget {
               ],
             ),
           ),
-        if (commentCount > 0) ...[
-          const SizedBox(height: 6),
-          GestureDetector(
-            onTap: onViewComments,
-            child: Text('View all $commentCount comments',
-                style: TextStyle(color: Colors.grey.shade600)),
-          ),
-        ],
+        Obx(() {
+          final ctrl = Get.find<FeedController>();
+          final idx  = ctrl.posts.indexWhere((p) => p.id == postId);
+          final count = idx >= 0 ? ctrl.posts[idx].commentsCount : fallbackPost.commentsCount;
+          if (count <= 0) return const SizedBox.shrink();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: onViewComments,
+                child: Text('View all $count comments',
+                    style: TextStyle(color: Colors.grey.shade600)),
+              ),
+            ],
+          );
+        }),
         const SizedBox(height: 6),
         Text(timeAgo,
             style: TextStyle(

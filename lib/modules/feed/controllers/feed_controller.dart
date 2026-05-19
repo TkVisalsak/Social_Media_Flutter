@@ -32,7 +32,7 @@ class FeedController extends GetxController {
   }
 
   // ── Fetch ────────────────────────────────────────
-  Future<void> fetchFeed({bool refresh = false}) async {
+  Future<void> fetchFeed({bool refresh = false, bool silent = false}) async {
     if (isLoading.value) return;
     if (!hasMore.value && !refresh) return;
 
@@ -44,7 +44,8 @@ class FeedController extends GetxController {
     if (refresh) {
       _page = 1;
       hasMore(true);
-      posts.clear();
+      // Silent refresh keeps showing current posts until new data arrives.
+      if (!silent) posts.clear();
     }
 
     isLoading(true);
@@ -56,9 +57,6 @@ class FeedController extends GetxController {
       final newPosts = res.data!.map((serverPost) {
         final existing = existingById[serverPost.id];
         if (existing == null) return serverPost;
-        // Keep the higher local count (guards against optimistic updates racing a
-        // refresh). Preserve isLiked/isSaved from local state with OR so that a
-        // backend feed list that omits these fields doesn't silently undo them.
         return serverPost.copyWith(
           likesCount: existing.likesCount > serverPost.likesCount
               ? existing.likesCount
@@ -73,7 +71,11 @@ class FeedController extends GetxController {
           isSaved: serverPost.isSaved || existing.isSaved,
         );
       }).toList();
-      posts.addAll(newPosts);
+      if (refresh && silent) {
+        posts.assignAll(newPosts);
+      } else {
+        posts.addAll(newPosts);
+      }
       if (newPosts.isEmpty || newPosts.length < 20) hasMore(false);
       _page++;
     } else {

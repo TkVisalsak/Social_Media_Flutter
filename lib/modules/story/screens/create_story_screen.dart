@@ -32,6 +32,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
   void initState() {
     super.initState();
     _loadUser();
+    // Open the camera immediately so the user doesn't see a bare black screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onCaptureTap());
   }
 
   String _username   = '';

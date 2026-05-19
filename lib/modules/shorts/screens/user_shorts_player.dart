@@ -111,6 +111,7 @@ class _UserShortsPlayerState extends State<UserShortsPlayer> {
           key: ValueKey(widget.shorts[i].id),
           short: widget.shorts[i],
           isActive: i == _currentIndex,
+          navBarH: 0,
         ),
       ),
     );

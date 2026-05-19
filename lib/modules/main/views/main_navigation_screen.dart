@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../shared/widgets/animated_nav_bar.dart';
+import '../../feed/controllers/feed_controller.dart';
+import '../../feed/controllers/story_feed_controller.dart';
 import '../../feed/views/feed_view.dart';
+import '../../message/controllers/message_controller.dart';
 import '../../message/views/message_view.dart';
+import '../../profile/controllers/profile_controller.dart';
 import '../../profile/views/profile_view.dart';
 import '../../search/views/search_view.dart';
 import '../../shorts/controllers/shorts_controller.dart';
@@ -18,6 +22,18 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int currentIndex = 0;
+
+  void _onTabSelected(int index) {
+    switch (index) {
+      case 0:
+        Get.find<FeedController>().fetchFeed(refresh: true, silent: true);
+        Get.find<StoryFeedController>().fetch();
+      case 3:
+        Get.find<DirectController>().fetchConversations(refresh: true);
+      case 4:
+        Get.find<ProfileController>().reload();
+    }
+  }
 
   static const List<Widget> _pages = [
     FeedView(),
@@ -49,6 +65,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onChanged: (index) {
           setState(() { currentIndex = index; });
           Get.find<ShortsController>().isTabVisible.value = (index == 1);
+          _onTabSelected(index);
         },
       ),
     );

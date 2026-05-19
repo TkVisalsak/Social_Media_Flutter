@@ -23,6 +23,13 @@ class _CreateShortScreenState extends State<CreateShortScreen> {
   int    _selectedTab = 0; // 0 = REEL, 1 = TEMPLATES
 
   @override
+  void initState() {
+    super.initState();
+    // Open the camera immediately so the user doesn't see a bare black screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pickCamera());
+  }
+
+  @override
   void dispose() {
     _captionCtrl.dispose();
     super.dispose();

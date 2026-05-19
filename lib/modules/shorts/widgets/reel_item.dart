@@ -18,11 +18,15 @@ import 'reel_share_sheet.dart';
 class ReelItem extends StatefulWidget {
   final ShortModel short;
   final bool       isActive;
+  /// Height of the bottom nav bar to offset content above. Pass 0 when there
+  /// is no bottom nav bar (e.g. UserShortsPlayer).
+  final double     navBarH;
 
   const ReelItem({
     required super.key,           // key is required — parent passes ValueKey(short.id)
     required this.short,
     required this.isActive,
+    this.navBarH = 65.0,
   });
 
   @override
@@ -337,8 +341,7 @@ class _ReelItemState extends State<ReelItem> {
   @override
   Widget build(BuildContext context) {
     final bottomPad     = MediaQuery.of(context).padding.bottom;
-    const navBarH       = 65.0; // AnimatedNavBar fixed height
-    final contentBottom = bottomPad + navBarH + 12;
+    final contentBottom = bottomPad + widget.navBarH + 12;
     final username      = widget.short.user.username ?? widget.short.user.fullName ?? 'user';
     final profilePic    = widget.short.user.profilePic;
 

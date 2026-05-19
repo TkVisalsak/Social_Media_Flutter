@@ -9,6 +9,31 @@ import 'story_item.dart';
 class StorySection extends GetWidget<StoryFeedController> {
   const StorySection({super.key});
 
+  StoryViewerUser? _buildMyViewerUser() {
+    final myId = controller.myUserId;
+    if (myId.isEmpty) return null;
+    final myGroups = controller.groupedByUser
+        .where((g) => g.first.user.id == myId)
+        .toList();
+    if (myGroups.isEmpty) return null;
+    final myStories = myGroups.first;
+    final first = myStories.first;
+    final profilePic = first.user.profilePic ?? '';
+    return StoryViewerUser(
+      userId: first.user.id,
+      username: first.user.username ?? first.user.fullName ?? 'You',
+      profileImage: profilePic,
+      isNetworkImage: profilePic.startsWith('http'),
+      stories: myStories.expand((s) => s.mediaUrl.map((m) => StoryViewerItem(
+        storyId: s.id,
+        type: m.type == 'video' ? StoryViewerType.video : StoryViewerType.image,
+        media: m.url,
+        isNetwork: m.url.startsWith('http'),
+        time: _timeAgo(s.createdAt),
+      ))).toList(),
+    );
+  }
+
   List<StoryViewerUser> _buildViewerUsers() {
     final myId = controller.myUserId;
     return controller.groupedByUser
@@ -33,7 +58,6 @@ class StorySection extends GetWidget<StoryFeedController> {
         })
         .toList()
       ..sort((a, b) {
-        // Unseen stories first (left), seen stories last (right)
         if (a.viewed == b.viewed) return 0;
         return a.viewed ? 1 : -1;
       });
@@ -52,12 +76,27 @@ class StorySection extends GetWidget<StoryFeedController> {
     return SizedBox(
       height: 110,
       child: Obx(() {
+        final myUser = _buildMyViewerUser();
         final viewerUsers = _buildViewerUsers();
+        // myUser sits at index 0 when present; others shift by 1.
+        final allUsers = myUser != null ? [myUser, ...viewerUsers] : viewerUsers;
         return ListView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           children: [
-            const CurrentUserStoryItem(),
+            if (myUser != null)
+              StoryItem(
+                username: 'Your story',
+                imageUrl: myUser.profileImage.isNotEmpty ? myUser.profileImage : null,
+                isNetworkImage: myUser.isNetworkImage,
+                hasStory: true,
+                isCurrentUser: true,
+                isViewed: myUser.viewed,
+                allUsers: allUsers,
+                userIndex: 0,
+              )
+            else
+              const CurrentUserStoryItem(),
             ...List.generate(viewerUsers.length, (i) {
               final vu = viewerUsers[i];
               return StoryItem(
@@ -66,8 +105,8 @@ class StorySection extends GetWidget<StoryFeedController> {
                 isNetworkImage: vu.isNetworkImage,
                 hasStory: true,
                 isViewed: vu.viewed,
-                allUsers: viewerUsers,
-                userIndex: i,
+                allUsers: allUsers,
+                userIndex: myUser != null ? i + 1 : i,
               );
             }),
           ],
