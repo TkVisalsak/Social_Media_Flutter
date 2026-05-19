@@ -7,7 +7,7 @@ class AppConfig {
 
   /// true  → local backend (device must be on the same WiFi as your machine)
   /// false → deployed production backend on Render
-  static const bool useLocalServer = true;
+  static const bool useLocalServer = false;
 
   // ── Local dev ──────────────────────────────────────────────────────────────
   // Your machine's LAN IP: run `hostname -I | awk '{print $1}'` to get it.
