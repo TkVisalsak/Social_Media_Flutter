@@ -12,6 +12,7 @@ abstract class FeedRepository {
   Future<ApiResponse<PostModel>>       getPostById(String postId);
   Future<ApiResponse<PostModel>>       createPost({
     String? caption, List<String> filePaths, String visibility, String? location,
+    String? feeling, List<String> taggedUsers,
   });
   Future<ApiResponse<void>>            toggleLike(String postId, {required bool wasLiked});
   Future<ApiResponse<int>>             getLikesCount(String postId);
@@ -70,11 +71,14 @@ class FeedRepositoryImpl implements FeedRepository {
     List<String> filePaths = const [],
     String visibility = 'public',
     String? location,
+    String? feeling,
+    List<String> taggedUsers = const [],
   }) async {
     try {
       final res = await _provider.createPost(
         caption: caption, filePaths: filePaths,
         visibility: visibility, location: location,
+        feeling: feeling, taggedUsers: taggedUsers,
       );
       final body = _normalizeBody(res.data);
       final raw = body['data'] ?? body;

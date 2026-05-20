@@ -118,6 +118,8 @@ class FeedController extends GetxController {
     List<String> imagePaths = const [],
     String visibility = 'public',
     String? location,
+    String? feeling,
+    List<String> taggedUsers = const [],
   }) async {
     isCreating(true);
     final me = await LocalStorage.user;
@@ -126,6 +128,8 @@ class FeedController extends GetxController {
       filePaths: imagePaths,
       visibility: visibility,
       location: location,
+      feeling: feeling,
+      taggedUsers: taggedUsers,
     );
     isCreating(false);
 

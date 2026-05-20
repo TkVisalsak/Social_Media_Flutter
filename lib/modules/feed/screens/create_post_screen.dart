@@ -169,15 +169,15 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       _                            => 'followers',
     };
 
-    // Build caption: combine text, feeling tag, and location label.
-    var caption = _textCtrl.text.trim();
-    if (_feeling != null) caption = '$caption — feeling $_feeling'.trim();
+    final caption = _textCtrl.text.trim();
 
     final ok = await Get.find<FeedController>().createPost(
-      caption:     caption.isEmpty ? null : caption,
-      imagePaths:  _images.map((x) => x.path).toList(),
-      visibility:  visibility,
-      location:    _location,
+      caption:      caption.isEmpty ? null : caption,
+      imagePaths:   _images.map((x) => x.path).toList(),
+      visibility:   visibility,
+      location:     _location,
+      feeling:      _feeling,
+      taggedUsers:  _tagged,
     );
 
     if (!mounted) return;

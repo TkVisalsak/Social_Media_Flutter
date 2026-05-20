@@ -170,8 +170,14 @@ class _PostCardState extends State<PostCard> {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: _PostHeader(username: username, profilePic: profilePic,
-              subtitle: post.location ?? '', post: post),
+          child: _PostHeader(
+            username:    username,
+            profilePic:  profilePic,
+            location:    post.location,
+            feeling:     post.feeling,
+            taggedUsers: post.taggedUsers,
+            post:        post,
+          ),
         ),
         const SizedBox(height: 12),
         if (images.isNotEmpty)
@@ -214,20 +220,45 @@ class _PostCardState extends State<PostCard> {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 class _PostHeader extends StatelessWidget {
-  final String   username;
-  final String?  profilePic;
-  final String   subtitle;
-  final PostModel post;
+  final String       username;
+  final String?      profilePic;
+  final String?      location;
+  final String?      feeling;
+  final List<String> taggedUsers;
+  final PostModel    post;
 
   const _PostHeader({
     required this.username,
     this.profilePic,
-    required this.subtitle,
+    this.location,
+    this.feeling,
+    this.taggedUsers = const [],
     required this.post,
   });
 
   @override
   Widget build(BuildContext context) {
+    final hasLocation    = location != null && location!.isNotEmpty;
+    final hasFeeling     = feeling  != null && feeling!.isNotEmpty;
+    final hasTaggedUsers = taggedUsers.isNotEmpty;
+
+    // Build metadata lines
+    final List<InlineSpan> metaSpans = [];
+    if (hasFeeling) {
+      metaSpans.add(TextSpan(text: 'is feeling $feeling'));
+    }
+    if (hasTaggedUsers) {
+      if (metaSpans.isNotEmpty) metaSpans.add(const TextSpan(text: '  ·  '));
+      metaSpans.add(const TextSpan(text: 'with '));
+      for (var i = 0; i < taggedUsers.length; i++) {
+        if (i > 0) metaSpans.add(const TextSpan(text: ', '));
+        metaSpans.add(TextSpan(
+          text: '@${taggedUsers[i]}',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ));
+      }
+    }
+
     return Row(
       children: [
         GestureDetector(
@@ -250,10 +281,25 @@ class _PostHeader extends StatelessWidget {
                 Text(username,
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 15)),
-                if (subtitle.isNotEmpty)
-                  Text(subtitle,
-                      style: TextStyle(
-                          color: Colors.grey.shade600, fontSize: 12)),
+                if (metaSpans.isNotEmpty)
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                      children: metaSpans,
+                    ),
+                  ),
+                if (hasLocation)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.location_on_rounded,
+                          size: 12, color: Colors.grey.shade500),
+                      const SizedBox(width: 2),
+                      Text(location!,
+                          style: TextStyle(
+                              color: Colors.grey.shade600, fontSize: 12)),
+                    ],
+                  ),
               ],
             ),
           ),

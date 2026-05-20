@@ -61,11 +61,15 @@ class FeedProvider {
     List<String> filePaths = const [],
     String visibility = 'public',
     String? location,
+    String? feeling,
+    List<String> taggedUsers = const [],
   }) async {
     final form = FormData.fromMap({
       if (caption != null && caption.trim().isNotEmpty) 'caption': caption.trim(),
       'visibility': visibility,
       if (location != null && location.isNotEmpty) 'location': location,
+      if (feeling != null && feeling.isNotEmpty) 'feeling': feeling,
+      if (taggedUsers.isNotEmpty) 'taggedUsers': taggedUsers.join(','),
     });
     for (final path in filePaths) {
       form.files.add(MapEntry('file', await MultipartFile.fromFile(path)));

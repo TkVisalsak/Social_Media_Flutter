@@ -29,8 +29,10 @@ class PostModel {
   final bool      isSaved;
   final String visibility; // ✅ added — backend has this
   final List<String> hashtags; // ✅ added — backend has this
-  final String? location; // ✅ added — backend has this
-  final bool isEdited; // ✅ added — backend has this
+  final String? location;
+  final String? feeling;
+  final List<String> taggedUsers;
+  final bool isEdited;
   final DateTime  createdAt;
 
   const PostModel({
@@ -46,7 +48,9 @@ class PostModel {
     this.isSaved       = false,
     this.visibility    = 'public',
     this.hashtags      = const [],
-    this.location       ,
+    this.location,
+    this.feeling,
+    this.taggedUsers   = const [],
     this.isEdited       = false,
     required this.createdAt,
   });
@@ -124,6 +128,8 @@ class PostModel {
       visibility: j['visibility'] ?? 'public',
       hashtags: (j['hashtags'] as List?)?.map((e) => e.toString()).toList() ?? [],
       location: JsonUtils.nullableString(j['location']),
+      feeling: JsonUtils.nullableString(j['feeling']),
+      taggedUsers: (j['taggedUsers'] as List?)?.map((e) => e.toString()).toList() ?? [],
       isEdited: JsonUtils.toBool(j['isEdited']),
       createdAt: JsonUtils.toDateTime(j['createdAt']),
     );
@@ -144,6 +150,8 @@ class PostModel {
       'visibility':    visibility,
       'hashtags':      hashtags,
       'location':      location,
+      'feeling':       feeling,
+      'taggedUsers':   taggedUsers,
       'isEdited':      isEdited,
       'createdAt':     createdAt.toIso8601String(),
     };
@@ -164,6 +172,8 @@ class PostModel {
     String?    visibility,
     List<String>? hashtags,
     String?    location,
+    String?    feeling,
+    List<String>? taggedUsers,
     bool?      isEdited,
     DateTime?  createdAt,
   }) {
@@ -181,6 +191,8 @@ class PostModel {
       visibility:    visibility    ?? this.visibility,
       hashtags:      hashtags      ?? this.hashtags,
       location:      location      ?? this.location,
+      feeling:       feeling       ?? this.feeling,
+      taggedUsers:   taggedUsers   ?? this.taggedUsers,
       isEdited:      isEdited      ?? this.isEdited,
       createdAt:     createdAt     ?? this.createdAt,
     );
