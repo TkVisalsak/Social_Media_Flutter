@@ -44,8 +44,10 @@ class ProfileController extends GetxController {
   final myPosts          = <PostModel>[].obs;
   final myShorts         = <ShortModel>[].obs;
   final myReposts        = <RepostModel>[].obs;
-  // contentId → PostModel for feed-type reposts (populated in _loadContent)
+  // contentId → PostModel  for feed-type reposts
   final repostPostCache  = <String, PostModel>{};
+  // contentId → ShortModel for short-type reposts
+  final repostShortCache = <String, ShortModel>{};
   final likedPosts       = <PostModel>[].obs;
   final likedShorts      = <ShortModel>[].obs;
   final savedPosts       = <PostModel>[].obs;
@@ -109,11 +111,11 @@ class ProfileController extends GetxController {
     }
     if (repostsRes.success && repostsRes.data != null) {
       myReposts.assignAll(repostsRes.data!);
-      // Pre-fetch actual PostModel for each feed-type repost so the tab can
-      // show the post image and like/save buttons without per-tile requests.
-      final feedReposts = repostsRes.data!
-          .where((r) => r.contentType == RepostContentType.feed)
-          .toList();
+
+      final feedReposts  = repostsRes.data!.where((r) => r.contentType == RepostContentType.feed).toList();
+      final shortReposts = repostsRes.data!.where((r) => r.contentType == RepostContentType.short).toList();
+
+      // Pre-fetch PostModel for feed reposts
       if (feedReposts.isNotEmpty) {
         final fetched = await Future.wait(
           feedReposts.map((r) => _feedRepo.getPostById(r.contentId)),
@@ -123,6 +125,20 @@ class ProfileController extends GetxController {
           final result = fetched[i];
           if (result.success && result.data != null) {
             repostPostCache[feedReposts[i].contentId] = result.data!;
+          }
+        }
+      }
+
+      // Pre-fetch ShortModel for short reposts
+      if (shortReposts.isNotEmpty) {
+        final fetched = await Future.wait(
+          shortReposts.map((r) => _shortRepo.getById(r.contentId)),
+        );
+        repostShortCache.clear();
+        for (int i = 0; i < shortReposts.length; i++) {
+          final result = fetched[i];
+          if (result.success && result.data != null) {
+            repostShortCache[shortReposts[i].contentId] = result.data!;
           }
         }
       }

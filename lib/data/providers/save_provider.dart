@@ -18,8 +18,11 @@ class SaveProvider {
   Future<Response<dynamic>> unsave(String contentId) =>
       _dio.delete('${ApiEndpoints.save}/$contentId');
 
-  Future<Response<dynamic>> isSaved(String contentId) =>
-      _dio.get('${ApiEndpoints.saveCheck}/$contentId');
+  Future<Response<dynamic>> isSaved(String contentId, {String? contentType}) =>
+      _dio.get(
+        '${ApiEndpoints.saveCheck}/$contentId',
+        queryParameters: contentType != null ? {'contentType': contentType} : null,
+      );
 
   Future<Response<dynamic>> savedByUser(String userId) =>
       _dio.get('${ApiEndpoints.save}/$userId');

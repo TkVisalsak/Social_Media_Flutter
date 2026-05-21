@@ -6,11 +6,13 @@ import 'package:video_player/video_player.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/services/repost_store.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../data/models/repost_model.dart';
 import '../../../data/models/short_model.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../data/models/save_model.dart';
 import '../../../data/providers/local_storage.dart';
 import '../../../data/repositories/repost_repository.dart';
+import '../../../data/repositories/save_repository.dart';
 import '../../../shared/widgets/social_action_buttons.dart';
 import '../controllers/shorts_controller.dart';
 import 'reel_comments_sheet.dart';
@@ -42,7 +44,8 @@ class _ReelItemState extends State<ReelItem> {
   bool       _isReposted    = false;
   String?    _repostId;
   bool       _repostLoading = false;
-  int        _repostCount   = 0; // seeded from model in initState
+  bool       _isSaved       = false;
+  bool       _saveLoading   = false;
   bool       _isOwnVideo    = false;
   Timer?  _tapTimer;
   Worker? _visibilityWorker;
@@ -53,7 +56,6 @@ class _ReelItemState extends State<ReelItem> {
   @override
   void initState() {
     super.initState();
-    _repostCount = widget.short.repostCount;
     _initVideo();
     _initRepostState();
     _visibilityWorker = ever(
@@ -69,6 +71,7 @@ class _ReelItemState extends State<ReelItem> {
     );
     _loadFollowStatus();
     _detectOwnVideo();
+    _loadSaveStatus();
   }
 
   void _initRepostState() {
@@ -185,7 +188,6 @@ class _ReelItemState extends State<ReelItem> {
           setState(() {
             _isReposted = false;
             _repostId   = null;
-            _repostCount = (_repostCount - 1).clamp(0, 999999);
           });
         }
       }
@@ -199,9 +201,8 @@ class _ReelItemState extends State<ReelItem> {
           Get.find<RepostStore>().add(widget.short.id, res.data!.id);
         }
         setState(() {
-          _isReposted  = true;
-          _repostId    = res.data!.id;
-          _repostCount = _repostCount + 1;
+          _isReposted = true;
+          _repostId   = res.data!.id;
         });
       } else {
         final err = res.error ?? '';
@@ -214,6 +215,24 @@ class _ReelItemState extends State<ReelItem> {
     }
 
     setState(() => _repostLoading = false);
+  }
+
+  Future<void> _loadSaveStatus() async {
+    final res = await Get.find<SaveRepository>()
+        .isSaved(widget.short.id, contentType: 'short');
+    if (res.success && mounted) setState(() => _isSaved = res.data ?? false);
+  }
+
+  Future<void> _toggleSave() async {
+    if (_saveLoading) return;
+    final wasSaved = _isSaved;
+    setState(() { _isSaved = !wasSaved; _saveLoading = true; });
+    final repo = Get.find<SaveRepository>();
+    final res  = wasSaved
+        ? await repo.unsave(widget.short.id)
+        : await repo.save(contentId: widget.short.id, contentType: SaveContentType.short);
+    if (!res.success) setState(() => _isSaved = wasSaved);
+    setState(() => _saveLoading = false);
   }
 
   void _openComments() {
@@ -489,17 +508,33 @@ class _ReelItemState extends State<ReelItem> {
                   }),
                   const SizedBox(height: 8),
 
-                  // ── Repost button ─────────────────────────────
+                  // ── Repost button (no count) ──────────────────
                   IgnorePointer(
                     ignoring: _repostLoading,
                     child: RepostButton(
                       isReposted: _isReposted,
-                      repostCount: _repostCount,
+                      repostCount: 0,
+                      showCount: false,
                       onTap: (_) => _toggleRepost(),
                       size: 26,
                       repostedColor: AppColors.repost,
                       unrepostedColor: Colors.white,
                       axis: Axis.vertical,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // ── Save button ───────────────────────────────
+                  GestureDetector(
+                    onTap: _toggleSave,
+                    child: Column(
+                      children: [
+                        Icon(
+                          _isSaved ? Icons.bookmark : Icons.bookmark_outline,
+                          color: _isSaved ? const Color(0xFFFFD700) : Colors.white,
+                          size: 30,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),

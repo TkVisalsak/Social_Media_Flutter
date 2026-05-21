@@ -36,45 +36,42 @@ class FeedController extends GetxController {
     if (isLoading.value) return;
     if (!hasMore.value && !refresh) return;
 
-    // Snapshot existing posts so we can preserve local count state on refresh.
-    final Map<String, PostModel> existingById = {
-      for (final p in posts) p.id: p
-    };
-
     if (refresh) {
       _page = 1;
       hasMore(true);
-      // Silent refresh keeps showing current posts until new data arrives.
-      if (!silent) posts.clear();
+      // Do NOT clear the list before fetching. The live list keeps optimistic
+      // like/save state so the merge below can preserve it. Both silent and
+      // pull-to-refresh use assignAll which atomically replaces the posts when
+      // data arrives — no flash of empty and no stale-state race.
     }
 
     isLoading(true);
     error(null);
 
     final res = await _repo.getFeed(_page);
-    print('res: ${res.data}');
     if (res.success) {
       final newPosts = res.data!.map((serverPost) {
-        final existing = existingById[serverPost.id];
-        if (existing == null) return serverPost;
+        final idx = posts.indexWhere((p) => p.id == serverPost.id);
+        if (idx < 0) return serverPost;
+        final current = posts[idx];
         return serverPost.copyWith(
-          likesCount: existing.likesCount > serverPost.likesCount
-              ? existing.likesCount
+          likesCount: current.likesCount > serverPost.likesCount
+              ? current.likesCount
               : serverPost.likesCount,
-          commentsCount: existing.commentsCount > serverPost.commentsCount
-              ? existing.commentsCount
+          commentsCount: current.commentsCount > serverPost.commentsCount
+              ? current.commentsCount
               : serverPost.commentsCount,
-          repostsCount: existing.repostsCount > serverPost.repostsCount
-              ? existing.repostsCount
+          repostsCount: current.repostsCount > serverPost.repostsCount
+              ? current.repostsCount
               : serverPost.repostsCount,
-          isLiked: serverPost.isLiked || existing.isLiked,
-          isSaved: serverPost.isSaved || existing.isSaved,
+          isLiked: serverPost.isLiked || current.isLiked,
+          isSaved: serverPost.isSaved || current.isSaved,
         );
       }).toList();
-      if (refresh && silent) {
-        posts.assignAll(newPosts);
+      if (refresh) {
+        posts.assignAll(newPosts);   // atomic replace — no empty-flash
       } else {
-        posts.addAll(newPosts);
+        posts.addAll(newPosts);      // pagination append
       }
       if (newPosts.isEmpty || newPosts.length < 20) hasMore(false);
       _page++;
@@ -105,8 +102,11 @@ class FeedController extends GetxController {
 
     final res = await _repo.toggleLike(postId, wasLiked: old.isLiked);
     if (!res.success) {
-      posts[index] = old;
-      posts.refresh();
+      final rollbackIdx = posts.indexWhere((p) => p.id == postId);
+      if (rollbackIdx >= 0) {
+        posts[rollbackIdx] = old;
+        posts.refresh();
+      }
     }
   }
 

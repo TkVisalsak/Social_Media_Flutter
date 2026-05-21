@@ -6,11 +6,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/routes/app_routes.dart';
-import '../../../core/theme/app_colors.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/models/repost_model.dart';
 import '../../../data/models/short_model.dart';
-import '../../feed/controllers/feed_controller.dart';
 import '../../feed/widgets/feed_create_flow.dart';
 import '../../shorts/screens/user_shorts_player.dart';
 import '../controllers/highlights_controller.dart';
@@ -391,172 +389,67 @@ class ProfileView extends GetView<ProfileController> {
       if (controller.isContentLoading.value && controller.myReposts.isEmpty) {
         return const Center(child: CircularProgressIndicator(strokeWidth: 2));
       }
-      if (controller.myReposts.isEmpty) {
+      final reposts = controller.myReposts.toList();
+      if (reposts.isEmpty) {
         return const Center(
           child: Text('No reposts yet', style: TextStyle(color: Colors.grey)),
         );
       }
-      return ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: controller.myReposts.length,
-        separatorBuilder: (_, __) =>
-            const Divider(height: 1, indent: 16, endIndent: 16),
-        itemBuilder: (_, i) => _ProfileRepostTile(repost: controller.myReposts[i]),
+      // Collect shorts in display order so the player index is correct
+      final repostShorts = reposts
+          .where((r) => r.contentType == RepostContentType.short)
+          .map((r) => controller.repostShortCache[r.contentId])
+          .whereType<ShortModel>()
+          .toList();
+
+      return GridView.builder(
+        padding: EdgeInsets.zero,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
+        ),
+        itemCount: reposts.length,
+        itemBuilder: (ctx, i) {
+          final repost  = reposts[i];
+          final isShort = repost.contentType == RepostContentType.short;
+
+          if (isShort) {
+            final short = controller.repostShortCache[repost.contentId];
+            if (short == null) {
+              return Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.video_collection_outlined,
+                    color: Colors.grey, size: 32),
+              );
+            }
+            final idx = repostShorts.indexOf(short);
+            return GestureDetector(
+              onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                builder: (_) => UserShortsPlayer(
+                  shorts: repostShorts, initialIndex: idx < 0 ? 0 : idx),
+              )),
+              child: _ShortThumbnail(short: short),
+            );
+          }
+
+          final post = controller.repostPostCache[repost.contentId];
+          final url  = post?.firstImageUrl;
+          return GestureDetector(
+            onTap: () { if (post != null) controller.openPostDetail(post); },
+            child: url != null && url.isNotEmpty
+                ? Image.network(url, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]))
+                : Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.image_outlined,
+                        color: Colors.grey, size: 32),
+                  ),
+          );
+        },
       );
     });
   }
 }
 
-class _ProfileRepostTile extends StatelessWidget {
-  final RepostModel repost;
-  const _ProfileRepostTile({required this.repost});
-
-  static String _timeAgo(DateTime t) {
-    final d = DateTime.now().difference(t);
-    if (d.inDays >= 1) return '${d.inDays}d ago';
-    if (d.inHours >= 1) return '${d.inHours}h ago';
-    if (d.inMinutes >= 1) return '${d.inMinutes}m ago';
-    return 'just now';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ctrl    = Get.find<ProfileController>();
-    final isShort = repost.contentType == RepostContentType.short;
-    final post    = isShort ? null : ctrl.repostPostCache[repost.contentId];
-    final timeAgo = _timeAgo(repost.createdAt);
-    final imgUrl  = post?.firstImageUrl;
-
-    return GestureDetector(
-      onTap: () {
-        if (post != null) {
-          Get.toNamed(AppRoutes.POST_DETAIL, arguments: post);
-        }
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Thumbnail
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: imgUrl != null && imgUrl.isNotEmpty
-                    ? Image.network(imgUrl, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            Container(color: Colors.grey[200]))
-                    : Container(
-                        color: Colors.grey[100],
-                        child: Icon(
-                          isShort
-                              ? Icons.video_collection_outlined
-                              : Icons.image_outlined,
-                          color: Colors.grey[400],
-                          size: 28,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Info + actions
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    isShort ? 'Reposted a Reel' : 'Reposted a Post',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 14),
-                  ),
-                  if (repost.caption != null && repost.caption!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        repost.caption!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.black87, fontSize: 13),
-                      ),
-                    ),
-                  const SizedBox(height: 6),
-                  // Like + Save row
-                  if (post != null) _LikeSaveRow(post: post),
-                  const SizedBox(height: 4),
-                  Text(timeAgo,
-                      style: const TextStyle(
-                          color: Colors.grey, fontSize: 11)),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LikeSaveRow extends StatelessWidget {
-  final PostModel post;
-  const _LikeSaveRow({required this.post});
-
-  static String _fmt(int n) =>
-      n >= 1000 ? '${(n / 1000).toStringAsFixed(1)}K' : '$n';
-
-  @override
-  Widget build(BuildContext context) {
-    final ctrl = Get.find<FeedController>();
-
-    PostModel _live() {
-      final i = ctrl.posts.indexWhere((p) => p.id == post.id);
-      return i >= 0 ? ctrl.posts[i] : post;
-    }
-
-    return Row(
-      children: [
-        // Like
-        Obx(() {
-          final p = _live();
-          return GestureDetector(
-            onTap: () => ctrl.toggleLike(post.id),
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  p.isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  size: 18,
-                  color: p.isLiked ? const Color(0xFFFF4D6D) : Colors.grey,
-                ),
-                const SizedBox(width: 3),
-                Text(_fmt(p.likesCount),
-                    style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          );
-        }),
-        const SizedBox(width: 16),
-        // Save
-        Obx(() {
-          final p = _live();
-          return GestureDetector(
-            onTap: () => ctrl.toggleSave(post.id),
-            behavior: HitTestBehavior.opaque,
-            child: Icon(
-              p.isSaved ? Icons.bookmark : Icons.bookmark_outline,
-              size: 18,
-              color: p.isSaved ? AppColors.save : Colors.grey,
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
 
 // ─── Short thumbnail with counts ──────────────────────────────────────────────
 

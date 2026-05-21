@@ -12,7 +12,7 @@ abstract class SaveRepository {
     required SaveContentType contentType,
   });
   Future<ApiResponse<void>> unsave(String contentId);
-  Future<ApiResponse<bool>> isSaved(String contentId);
+  Future<ApiResponse<bool>> isSaved(String contentId, {String? contentType});
   Future<ApiResponse<List<SaveModel>>> getSavedByUser(String userId);
 }
 
@@ -62,9 +62,9 @@ class SaveRepositoryImpl implements SaveRepository {
   }
 
   @override
-  Future<ApiResponse<bool>> isSaved(String contentId) async {
+  Future<ApiResponse<bool>> isSaved(String contentId, {String? contentType}) async {
     try {
-      final res = await _provider.isSaved(contentId);
+      final res = await _provider.isSaved(contentId, contentType: contentType);
       final body = RepoHelpers.normalizeBody(res.data);
       return ApiResponse.success(body['saved'] == true);
     } on AppException catch (e) {
