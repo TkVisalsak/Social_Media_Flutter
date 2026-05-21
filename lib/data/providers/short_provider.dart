@@ -8,20 +8,22 @@ class ShortProvider {
 
   Future<Response<dynamic>> getAll() => _dio.get(ApiEndpoints.shortsAll);
 
-  Future<Response<dynamic>> getFriendsShorts() =>
+  Future<Response<dynamic>> getFollowingShorts() =>
       _dio.get(ApiEndpoints.friendsShorts);
 
   Future<Response<dynamic>> upload({
     required String filePath,
     String? caption,
     int? duration,
+    void Function(int, int)? onSendProgress,
   }) async {
     final form = FormData.fromMap({
       'video': await MultipartFile.fromFile(filePath),
       if (caption != null) 'caption': caption,
       if (duration != null) 'duration': duration,
     });
-    return _dio.post(ApiEndpoints.shortsCreate, data: form);
+    return _dio.post(ApiEndpoints.shortsCreate,
+        data: form, onSendProgress: onSendProgress);
   }
 
   Future<Response<dynamic>> recordView(String shortId) =>
@@ -54,6 +56,12 @@ class ShortProvider {
 
   Future<Response<dynamic>> getByUser(String userId) =>
       _dio.get('${ApiEndpoints.shortsByUser}/$userId');
+
+  Future<Response<dynamic>> getById(String id) =>
+      _dio.get('${ApiEndpoints.shortsVideo}/$id');
+
+  Future<Response<dynamic>> getLikedByUser(String userId) =>
+      _dio.get('${ApiEndpoints.shortsLikedByUser}/$userId');
 
   Future<Response<dynamic>> deleteShort(String id) =>
       _dio.delete('${ApiEndpoints.shortsVideo}/$id');

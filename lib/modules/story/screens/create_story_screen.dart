@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 
 import '../../../data/providers/local_storage.dart';
 import '../../feed/controllers/story_feed_controller.dart';
@@ -238,6 +239,9 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
       _selectedMedia = file;
       _mediaType     = type;
     });
+    // Resolve the observable before the sheet builds to avoid Get.find
+    // being called inside the modal builder (which has a different context).
+    final uploadProgress = Get.find<StoryFeedController>().uploadProgress;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -246,9 +250,9 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         file: file,
         mediaType: type,
         visibility: _visibility,
-        isUploading: _isUploading,
         username: _username,
         profilePic: _profilePic,
+        uploadProgress: uploadProgress,
         onPrivacyTap: () async {
           final result = await Navigator.push<String>(
             context,
@@ -259,8 +263,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         onShare: _shareStory,
         onDiscard: () {
           setState(() => _selectedMedia = null);
-          Navigator.pop(context);  // close sheet
-          Navigator.pop(context);  // close screen
+          Navigator.pop(context);
+          Navigator.pop(context);
         },
       ),
     );
@@ -277,8 +281,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     if (!mounted) return;
     setState(() => _isUploading = false);
     if (ok) {
-      Navigator.pop(context); // close preview sheet
-      Navigator.pop(context); // close create screen
+      Navigator.pop(context);
+      Navigator.pop(context);
     }
   }
 
@@ -292,12 +296,12 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
 // ─── Story preview / upload sheet ─────────────────────────────────────────────
 
 class _StoryPreviewSheet extends StatefulWidget {
-  final File       file;
-  final String     mediaType;
-  final String     visibility;
-  final bool       isUploading;
-  final String     username;
-  final String     profilePic;
+  final File         file;
+  final String       mediaType;
+  final String       visibility;
+  final String       username;
+  final String       profilePic;
+  final RxDouble     uploadProgress;
   final VoidCallback onPrivacyTap;
   final VoidCallback onShare;
   final VoidCallback onDiscard;
@@ -306,9 +310,9 @@ class _StoryPreviewSheet extends StatefulWidget {
     required this.file,
     required this.mediaType,
     required this.visibility,
-    required this.isUploading,
     required this.username,
     required this.profilePic,
+    required this.uploadProgress,
     required this.onPrivacyTap,
     required this.onShare,
     required this.onDiscard,
@@ -319,6 +323,8 @@ class _StoryPreviewSheet extends StatefulWidget {
 }
 
 class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
+  Uint8List? _videoThumbnail;
+
   String get _visibilityLabel => switch (widget.visibility) {
         'friends'   => 'Friends',
         'private'   => 'Close Friends',
@@ -334,6 +340,22 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
       };
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.mediaType == 'video') _generateThumbnail();
+  }
+
+  Future<void> _generateThumbnail() async {
+    final bytes = await VideoThumbnail.thumbnailData(
+      video: widget.file.path,
+      imageFormat: ImageFormat.JPEG,
+      maxWidth: 720,
+      quality: 80,
+    );
+    if (mounted) setState(() => _videoThumbnail = bytes);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.paddingOf(context).top;
     return SizedBox(
@@ -344,32 +366,7 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
           Positioned.fill(
             child: widget.mediaType == 'image'
                 ? Image.file(widget.file, fit: BoxFit.cover)
-                : Container(
-                    color: Colors.black,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.video_file_rounded,
-                              color: Colors.white54, size: 72),
-                          const SizedBox(height: 12),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 32),
-                            child: Text(
-                              widget.file.path.split('/').last,
-                              textAlign: TextAlign.center,
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 2,
-                              style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                : _buildVideoPreview(),
           ),
 
           // ── Dark gradient at top ──────────────────────────────
@@ -412,13 +409,25 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
             ),
           ),
 
+          // ── Upload progress overlay ───────────────────────────
+          Positioned.fill(
+            child: Obx(() {
+              final progress = widget.uploadProgress.value;
+              if (progress < 0) return const SizedBox.shrink();
+              return IgnorePointer(
+                child: ColoredBox(
+                  color: Colors.black.withValues(alpha: 0.45),
+                ),
+              );
+            }),
+          ),
+
           // ── Top bar ───────────────────────────────────────────
           Positioned(
             top: topPad + 8,
             left: 14, right: 14,
             child: Row(
               children: [
-                // Back / discard
                 GestureDetector(
                   onTap: widget.onDiscard,
                   child: Container(
@@ -432,7 +441,6 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
                   ),
                 ),
                 const Spacer(),
-                // Privacy chip
                 GestureDetector(
                   onTap: widget.onPrivacyTap,
                   child: Container(
@@ -465,80 +473,134 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
             ),
           ),
 
-          // ── Bottom share button ───────────────────────────────
+          // ── Bottom share row ──────────────────────────────────
           Positioned(
             bottom: MediaQuery.paddingOf(context).bottom + 16,
             left: 16, right: 16,
-            child: Row(
-              children: [
-                // User avatar + name
-                if (widget.profilePic.isNotEmpty)
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundImage: NetworkImage(widget.profilePic),
-                  )
-                else
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.white24,
-                    child: Text(
-                      widget.username.isNotEmpty
-                          ? widget.username[0].toUpperCase()
-                          : 'Y',
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 13),
+            child: Obx(() {
+              final progress = widget.uploadProgress.value;
+              final uploading = progress >= 0;
+
+              return Row(
+                children: [
+                  // User avatar + name
+                  if (widget.profilePic.isNotEmpty)
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundImage: NetworkImage(widget.profilePic),
+                    )
+                  else
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        widget.username.isNotEmpty
+                            ? widget.username[0].toUpperCase()
+                            : 'Y',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13),
+                      ),
                     ),
+                  const SizedBox(width: 10),
+                  Text(
+                    widget.username,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
                   ),
-                const SizedBox(width: 10),
-                Text(
-                  widget.username,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600),
-                ),
-                const Spacer(),
-                // Share button
-                widget.isUploading
-                    ? const SizedBox(
-                        width: 48, height: 48,
-                        child: Center(
-                          child: SizedBox(
-                            width: 24, height: 24,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                color: Colors.white),
+                  const Spacer(),
+                  if (uploading)
+                    // Progress pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(color: Colors.white38),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 80,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: progress,
+                                backgroundColor: Colors.white24,
+                                color: Colors.white,
+                                minHeight: 4,
+                              ),
+                            ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${(progress * 100).toInt()}%',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: widget.onShare,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 22, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(26),
                         ),
-                      )
-                    : GestureDetector(
-                        onTap: widget.onShare,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 22, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(26),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('Share to story',
-                                  style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700)),
-                              SizedBox(width: 6),
-                              Icon(Icons.arrow_forward_ios_rounded,
-                                  color: Colors.black, size: 14),
-                            ],
-                          ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text('Share to story',
+                                style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700)),
+                            SizedBox(width: 6),
+                            Icon(Icons.arrow_forward_ios_rounded,
+                                color: Colors.black, size: 14),
+                          ],
                         ),
                       ),
-              ],
+                    ),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoPreview() {
+    if (_videoThumbnail != null) {
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.memory(_videoThumbnail!, fit: BoxFit.cover),
+          // Play icon overlay to indicate it's a video
+          const Center(
+            child: IgnorePointer(
+              child: Icon(Icons.play_circle_outline_rounded,
+                  color: Colors.white54, size: 64),
             ),
           ),
         ],
+      );
+    }
+    // Thumbnail still loading
+    return const ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: CircularProgressIndicator(color: Colors.white38, strokeWidth: 1.5),
       ),
     );
   }

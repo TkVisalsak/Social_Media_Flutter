@@ -65,8 +65,9 @@ abstract class ApiEndpoints {
   // ── Users (legacy aliases) ────────────────────
   static const users = '/auth/user';
   static const search = '/users/search';
-  static const feedsByUser  = '/feeds/user';        // + /:userId
-  static const shortsByUser = '/shorts/video/user'; // + /:userId
+  static const feedsByUser      = '/feeds/user';          // + /:userId
+  static const shortsByUser     = '/shorts/video/user';   // + /:userId
+  static const shortsLikedByUser = '/shorts/video/liked'; // + /:userId
 
   // ── Notifications ─────────────────────────────
   static const notifications = '/notifications';

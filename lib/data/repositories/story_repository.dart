@@ -12,6 +12,7 @@ abstract class StoryRepository {
     required String filePath,
     String type = 'image',
     String visibility = 'public',
+    void Function(double)? onProgress,
   });
   Future<ApiResponse<List<StoryModel>>> getFeed();
   Future<ApiResponse<List<StoryModel>>> getMyStories();
@@ -26,14 +27,22 @@ class StoryRepositoryImpl implements StoryRepository {
   const StoryRepositoryImpl(this._provider);
 
   @override
+  @override
   Future<ApiResponse<StoryModel>> create({
     required String filePath,
     String type = 'image',
     String visibility = 'public',
+    void Function(double)? onProgress,
   }) async {
     try {
       final res = await _provider.create(
-          filePath: filePath, type: type, visibility: visibility);
+        filePath: filePath,
+        type: type,
+        visibility: visibility,
+        onSendProgress: onProgress == null
+            ? null
+            : (sent, total) { if (total > 0) onProgress(sent / total); },
+      );
       final body = RepoHelpers.normalizeBody(res.data);
       final raw = body['story'] ?? body['data'] ?? body;
       if (raw is! Map<String, dynamic>) {

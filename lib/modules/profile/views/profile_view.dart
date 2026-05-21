@@ -9,6 +9,7 @@ import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/post_model.dart';
 import '../../../data/models/repost_model.dart';
+import '../../../data/models/short_model.dart';
 import '../../feed/controllers/feed_controller.dart';
 import '../../feed/widgets/feed_create_flow.dart';
 import '../../shorts/screens/user_shorts_player.dart';
@@ -285,7 +286,6 @@ class ProfileView extends GetView<ProfileController> {
         itemCount: controller.myShorts.length,
         itemBuilder: (context, i) {
           final short = controller.myShorts[i];
-          final thumb = short.thumbnailUrl;
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -296,42 +296,7 @@ class ProfileView extends GetView<ProfileController> {
                 ),
               ),
             ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (thumb != null && thumb.isNotEmpty)
-                  Image.network(
-                    thumb,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (_, child, progress) => progress == null
-                        ? child
-                        : Container(color: Colors.grey[200]),
-                    errorBuilder: (_, __, ___) =>
-                        Container(color: Colors.grey[300]),
-                  )
-                else
-                  Container(color: Colors.grey[300]),
-                // Gradient overlay so play icon is always readable
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: [0.5, 1.0],
-                      colors: [Colors.transparent, Colors.black54],
-                    ),
-                  ),
-                ),
-                const Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.play_arrow_rounded,
-                        color: Colors.white, size: 22),
-                  ),
-                ),
-              ],
-            ),
+            child: _ShortThumbnail(short: short),
           );
         },
       );
@@ -340,82 +305,85 @@ class ProfileView extends GetView<ProfileController> {
 
   Widget _buildLikedPostsGrid() {
     return Obx(() {
-      if (controller.isContentLoading.value && controller.likedPosts.isEmpty) {
+      if (controller.isContentLoading.value) {
         return const Center(child: CircularProgressIndicator(strokeWidth: 2));
       }
-      if (controller.likedPosts.isEmpty) {
-        return const Center(
-          child: Text('No liked posts yet', style: TextStyle(color: Colors.grey)),
-        );
-      }
-      return GridView.builder(
-        padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
-        ),
-        itemCount: controller.likedPosts.length,
-        itemBuilder: (context, i) {
-          final PostModel post = controller.likedPosts[i];
-          final url = post.firstImageUrl;
-          if (url == null || url.isEmpty) {
-            return GestureDetector(
-              onTap: () => controller.openPostDetail(post),
-              child: Container(
-                color: Colors.grey[200],
-                child: const Icon(Icons.image_outlined, color: Colors.grey),
-              ),
-            );
-          }
-          return GestureDetector(
-            onTap: () => controller.openPostDetail(post),
-            child: Image.network(
-              url, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]),
-            ),
-          );
-        },
+      // Access list contents inside Obx so GetX tracks every change.
+      final posts  = controller.likedPosts.toList();
+      final shorts = controller.likedShorts.toList();
+      return _buildMixedGrid(
+        context: Get.context!,
+        posts: posts,
+        shorts: shorts,
+        emptyLabel: 'No liked content yet',
+        onPostTap: (p) => controller.openPostDetail(p),
       );
     });
   }
 
   Widget _buildSavedPostsGrid() {
     return Obx(() {
-      if (controller.isContentLoading.value && controller.savedPosts.isEmpty) {
+      if (controller.isContentLoading.value) {
         return const Center(child: CircularProgressIndicator(strokeWidth: 2));
       }
-      if (controller.savedPosts.isEmpty) {
-        return const Center(
-          child: Text('No saved posts yet', style: TextStyle(color: Colors.grey)),
-        );
-      }
-      return GridView.builder(
-        padding: EdgeInsets.zero,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
-        ),
-        itemCount: controller.savedPosts.length,
-        itemBuilder: (context, i) {
-          final PostModel post = controller.savedPosts[i];
-          final url = post.firstImageUrl;
-          if (url == null || url.isEmpty) {
-            return GestureDetector(
-              onTap: () => controller.openPostDetail(post),
-              child: Container(
-                color: Colors.grey[200],
-                child: const Icon(Icons.image_outlined, color: Colors.grey),
-              ),
-            );
-          }
-          return GestureDetector(
-            onTap: () => controller.openPostDetail(post),
-            child: Image.network(
-              url, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]),
-            ),
-          );
-        },
+      final posts  = controller.savedPosts.toList();
+      final shorts = controller.savedShorts.toList();
+      return _buildMixedGrid(
+        context: Get.context!,
+        posts: posts,
+        shorts: shorts,
+        emptyLabel: 'No saved content yet',
+        onPostTap: (p) => controller.openPostDetail(p),
       );
     });
+  }
+
+  static Widget _buildMixedGrid({
+    required BuildContext context,
+    required List<PostModel>  posts,
+    required List<ShortModel> shorts,
+    required String emptyLabel,
+    required void Function(PostModel) onPostTap,
+  }) {
+    final items = <Object>[...posts, ...shorts]
+      ..sort((a, b) {
+        final aDate = a is PostModel ? a.createdAt : (a as ShortModel).createdAt;
+        final bDate = b is PostModel ? b.createdAt : (b as ShortModel).createdAt;
+        return bDate.compareTo(aDate);
+      });
+    if (items.isEmpty) {
+      return Center(child: Text(emptyLabel, style: const TextStyle(color: Colors.grey)));
+    }
+    final shortsInOrder = items.whereType<ShortModel>().toList();
+    return GridView.builder(
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3, crossAxisSpacing: 1, mainAxisSpacing: 1,
+      ),
+      itemCount: items.length,
+      itemBuilder: (ctx, i) {
+        final item = items[i];
+        if (item is PostModel) {
+          final url = item.firstImageUrl;
+          return GestureDetector(
+            onTap: () => onPostTap(item),
+            child: url != null && url.isNotEmpty
+                ? Image.network(url, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(color: Colors.grey[200]))
+                : Container(color: Colors.grey[200],
+                    child: const Icon(Icons.image_outlined, color: Colors.grey)),
+          );
+        }
+        final short = item as ShortModel;
+        final idx   = shortsInOrder.indexOf(short);
+        return GestureDetector(
+          onTap: () => Navigator.push(ctx, MaterialPageRoute(
+            builder: (_) => UserShortsPlayer(shorts: shortsInOrder, initialIndex: idx),
+          )),
+          child: _ShortThumbnail(short: short),
+        );
+      },
+    );
   }
 
   Widget _buildRepostsTab() {
@@ -589,6 +557,79 @@ class _LikeSaveRow extends StatelessWidget {
     );
   }
 }
+
+// ─── Short thumbnail with counts ──────────────────────────────────────────────
+
+class _ShortThumbnail extends StatelessWidget {
+  final ShortModel short;
+  const _ShortThumbnail({required this.short});
+
+  static String _fmt(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final thumb = short.thumbnailUrl;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (thumb != null && thumb.isNotEmpty)
+          Image.network(
+            thumb,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : Container(color: Colors.grey[200]),
+            errorBuilder: (_, __, ___) => Container(color: Colors.grey[300]),
+          )
+        else
+          Container(color: Colors.grey[300]),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.45, 1.0],
+              colors: [Colors.transparent, Colors.black54],
+            ),
+          ),
+        ),
+        // Like + repost counts bottom-left
+        Positioned(
+          bottom: 5, left: 6,
+          child: Row(
+            children: [
+              const Icon(Icons.favorite_rounded, color: Colors.white, size: 13),
+              const SizedBox(width: 2),
+              Text(_fmt(short.likeCount),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              const Icon(Icons.repeat_rounded, color: Colors.white, size: 13),
+              const SizedBox(width: 2),
+              Text(_fmt(short.repostCount),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        // Play icon bottom-right
+        const Positioned(
+          bottom: 5, right: 6,
+          child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _StatItem extends StatelessWidget {
   final String label;

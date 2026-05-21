@@ -119,9 +119,9 @@ class _TopBar extends StatelessWidget {
                   ),
                   const SizedBox(width: 20),
                   _TabBtn(
-                    label:    'Friends',
-                    selected: feed == 'friends',
-                    onTap:    () => controller.switchFeed('friends'),
+                    label:    'Following',
+                    selected: feed == 'following',
+                    onTap:    () => controller.switchFeed('following'),
                   ),
                 ],
               );

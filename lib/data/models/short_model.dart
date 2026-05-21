@@ -11,6 +11,7 @@ class ShortModel {
     this.likeCount = 0,
     this.commentCount = 0,
     this.shareCount = 0,
+    this.repostCount = 0,
     this.views = 0,
     this.duration = 0,
     this.score = 0,
@@ -42,6 +43,7 @@ class ShortModel {
   final int likeCount;
   final int commentCount;
   final int shareCount;
+  final int repostCount;
   final int views;
   final int duration;
   final double score;
@@ -60,9 +62,10 @@ class ShortModel {
       videoUrl: (j['videoUrl'] ?? j['video_url'] ?? '').toString(),
       thumbnailUrl: JsonUtils.nullableString(j['thumbnailUrl'] ?? j['thumbnail_url']),
       caption: JsonUtils.nullableString(j['caption']),
-      likeCount: JsonUtils.toInt(j['likeCount'] ?? j['likesCount']),
+      likeCount:    JsonUtils.toInt(j['likeCount']    ?? j['likesCount']),
       commentCount: JsonUtils.toInt(j['commentCount'] ?? j['commentsCount']),
-      shareCount: JsonUtils.toInt(j['shareCount'] ?? j['sharesCount']),
+      shareCount:   JsonUtils.toInt(j['shareCount']   ?? j['sharesCount']),
+      repostCount:  JsonUtils.toInt(j['repostCount']  ?? j['repostsCount'] ?? j['reposts']),
       views: JsonUtils.toInt(j['views']),
       duration: JsonUtils.toInt(j['duration']),
       score: (j['score'] is num) ? (j['score'] as num).toDouble() : 0.0,
@@ -83,6 +86,7 @@ class ShortModel {
         'likeCount': likeCount,
         'commentCount': commentCount,
         'shareCount': shareCount,
+        'repostCount': repostCount,
         'views': views,
         'duration': duration,
         'score': score,
@@ -102,6 +106,7 @@ class ShortModel {
     int? likeCount,
     int? commentCount,
     int? shareCount,
+    int? repostCount,
     int? views,
     int? duration,
     double? score,
@@ -117,9 +122,10 @@ class ShortModel {
         videoUrl: videoUrl ?? this.videoUrl,
         thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
         caption: caption ?? this.caption,
-        likeCount: likeCount ?? this.likeCount,
+        likeCount:    likeCount    ?? this.likeCount,
         commentCount: commentCount ?? this.commentCount,
-        shareCount: shareCount ?? this.shareCount,
+        shareCount:   shareCount   ?? this.shareCount,
+        repostCount:  repostCount  ?? this.repostCount,
         views: views ?? this.views,
         duration: duration ?? this.duration,
         score: score ?? this.score,

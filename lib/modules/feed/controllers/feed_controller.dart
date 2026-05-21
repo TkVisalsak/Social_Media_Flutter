@@ -196,6 +196,18 @@ class FeedController extends GetxController {
     }
   }
 
+  // ── Delete ───────────────────────────────────────
+  Future<void> deletePost(String postId) async {
+    final res = await _repo.deletePost(postId);
+    if (res.success) {
+      posts.removeWhere((p) => p.id == postId);
+      posts.refresh();
+    } else {
+      Get.snackbar('Error', res.error ?? 'Failed to delete post',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
   // ── Navigation ────────────────────────────────────
   void openStory(String userId) =>
       Get.toNamed(AppRoutes.STORY, arguments: userId);

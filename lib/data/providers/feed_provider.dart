@@ -56,6 +56,9 @@ class FeedProvider {
   Future<Response<dynamic>> sharePost(String postId) =>
       _dio.post('${ApiEndpoints.likes}/$postId/share');
 
+  Future<Response<dynamic>> deletePost(String postId) =>
+      _dio.delete('${ApiEndpoints.feeds}/$postId');
+
   Future<Response<dynamic>> createPost({
     String? caption,
     List<String> filePaths = const [],

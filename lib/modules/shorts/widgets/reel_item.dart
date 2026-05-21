@@ -42,7 +42,7 @@ class _ReelItemState extends State<ReelItem> {
   bool       _isReposted    = false;
   String?    _repostId;
   bool       _repostLoading = false;
-  int        _repostCount   = 0;
+  int        _repostCount   = 0; // seeded from model in initState
   bool       _isOwnVideo    = false;
   Timer?  _tapTimer;
   Worker? _visibilityWorker;
@@ -53,6 +53,7 @@ class _ReelItemState extends State<ReelItem> {
   @override
   void initState() {
     super.initState();
+    _repostCount = widget.short.repostCount;
     _initVideo();
     _initRepostState();
     _visibilityWorker = ever(

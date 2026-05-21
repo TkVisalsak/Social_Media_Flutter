@@ -12,12 +12,14 @@ class ShortsController extends GetxController {
   final FollowRepository _followRepo;
   final bool skipInitialFetch;
 
-  final shorts       = <ShortModel>[].obs;
-  final isLoading    = false.obs;
-  final error        = RxnString();
-  final isTabVisible = false.obs;
+  final shorts         = <ShortModel>[].obs;
+  final isLoading      = false.obs;
+  final error          = RxnString();
+  final isTabVisible   = false.obs;
+  /// -1.0 = idle, 0.0–1.0 = upload in progress
+  final uploadProgress = (-1.0).obs;
 
-  /// 'fyp' or 'friends'
+  /// 'fyp' or 'following'
   final selectedFeed = 'fyp'.obs;
 
   // Follow status cache — avoids redundant API calls for the same user
@@ -32,8 +34,8 @@ class ShortsController extends GetxController {
   Future<void> fetchShorts() async {
     isLoading.value = true;
     error.value     = null;
-    final res = selectedFeed.value == 'friends'
-        ? await _repo.getFriendsShorts()
+    final res = selectedFeed.value == 'following'
+        ? await _repo.getFollowingShorts()
         : await _repo.getAllShorts();
     if (res.success && res.data != null) {
       shorts.assignAll(res.data!);
@@ -56,8 +58,14 @@ class ShortsController extends GetxController {
 
   Future<bool> createShort({required String filePath, String? caption}) async {
     isLoading(true);
+    uploadProgress.value = 0.0;
     final me  = await LocalStorage.user;
-    final res = await _repo.uploadShort(filePath: filePath, caption: caption);
+    final res = await _repo.uploadShort(
+      filePath: filePath,
+      caption: caption,
+      onProgress: (p) => uploadProgress.value = p,
+    );
+    uploadProgress.value = -1.0;
     isLoading(false);
 
     if (res.success && res.data != null) {

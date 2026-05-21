@@ -4,9 +4,12 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/post_model.dart';
+import '../../../data/models/user_model.dart';
 import '../../../core/services/repost_store.dart';
 import '../../../data/models/repost_model.dart';
 import '../../../data/repositories/repost_repository.dart';
+import '../../../data/providers/local_storage.dart';
+import '../../../data/repositories/user_repository.dart';
 import '../../../shared/widgets/social_action_buttons.dart';
 import '../../../shared/widgets/story_avatar.dart';
 import '../controllers/feed_controller.dart';
@@ -26,6 +29,7 @@ class _PostCardState extends State<PostCard> {
   bool    _isReposted    = false;
   String? _repostId;
   bool    _repostLoading = false;
+  bool    _isOwnPost     = false;
   Worker? _repostWorker;
 
   @override
@@ -37,6 +41,89 @@ class _PostCardState extends State<PostCard> {
         if (mounted) _syncFromStore();
       });
     }
+    _detectOwnership();
+  }
+
+  Future<void> _detectOwnership() async {
+    final me = await LocalStorage.user;
+    if (mounted) setState(() => _isOwnPost = me?.id == widget.post.user.id);
+  }
+
+  Future<void> _openPostMenu() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            if (_isOwnPost)
+              ListTile(
+                leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                title: const Text('Delete post', style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Delete Post?'),
+                      content: const Text('This cannot be undone.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Delete',
+                              style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) {
+                    await Get.find<FeedController>().deletePost(widget.post.id);
+                  }
+                },
+              ),
+            if (!_isOwnPost) ...[
+              ListTile(
+                leading: const Icon(Icons.flag_rounded),
+                title: const Text('Report'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.snackbar('Reported', 'Thanks for letting us know.',
+                      snackPosition: SnackPosition.BOTTOM,
+                      duration: const Duration(seconds: 2));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.not_interested_rounded),
+                title: const Text('Not interested'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.snackbar('Got it', 'You will see fewer posts like this.',
+                      snackPosition: SnackPosition.BOTTOM,
+                      duration: const Duration(seconds: 2));
+                },
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   void _syncFromStore() {
@@ -177,6 +264,7 @@ class _PostCardState extends State<PostCard> {
             feeling:     post.feeling,
             taggedUsers: post.taggedUsers,
             post:        post,
+            onMoreTap:   _openPostMenu,
           ),
         ),
         const SizedBox(height: 12),
@@ -217,15 +305,37 @@ class _PostCardState extends State<PostCard> {
   }
 }
 
+// ─── Tagged-user navigation ───────────────────────────────────────────────────
+
+Future<void> _navigateToTaggedUser(String username) async {
+  final res = await Get.find<UserRepository>().search(username);
+  if (res.success && res.data != null) {
+    UserModel? match;
+    for (final u in res.data!) {
+      if ((u.username ?? '').toLowerCase() == username.toLowerCase()) {
+        match = u;
+        break;
+      }
+    }
+    if (match != null) {
+      Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: match);
+      return;
+    }
+  }
+  Get.snackbar('Not found', '@$username could not be found',
+      snackPosition: SnackPosition.BOTTOM);
+}
+
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 class _PostHeader extends StatelessWidget {
-  final String       username;
-  final String?      profilePic;
-  final String?      location;
-  final String?      feeling;
-  final List<String> taggedUsers;
-  final PostModel    post;
+  final String        username;
+  final String?       profilePic;
+  final String?       location;
+  final String?       feeling;
+  final List<String>  taggedUsers;
+  final PostModel     post;
+  final VoidCallback  onMoreTap;
 
   const _PostHeader({
     required this.username,
@@ -234,6 +344,7 @@ class _PostHeader extends StatelessWidget {
     this.feeling,
     this.taggedUsers = const [],
     required this.post,
+    required this.onMoreTap,
   });
 
   @override
@@ -252,9 +363,20 @@ class _PostHeader extends StatelessWidget {
       metaSpans.add(const TextSpan(text: 'with '));
       for (var i = 0; i < taggedUsers.length; i++) {
         if (i > 0) metaSpans.add(const TextSpan(text: ', '));
-        metaSpans.add(TextSpan(
-          text: '@${taggedUsers[i]}',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+        final tagged = taggedUsers[i];
+        metaSpans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: GestureDetector(
+            onTap: () => _navigateToTaggedUser(tagged),
+            child: Text(
+              '@$tagged',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ),
         ));
       }
     }
@@ -305,7 +427,7 @@ class _PostHeader extends StatelessWidget {
           ),
         ),
         IconButton(
-            onPressed: () {},
+            onPressed: onMoreTap,
             icon: const Icon(Icons.more_horiz, size: 22)),
       ],
     );

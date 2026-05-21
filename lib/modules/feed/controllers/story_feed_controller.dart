@@ -13,6 +13,8 @@ class StoryFeedController extends GetxController {
   final stories = <StoryModel>[].obs;
   final isLoading = false.obs;
   final error = RxnString();
+  /// -1.0 = idle, 0.0–1.0 = upload in progress
+  final uploadProgress = (-1.0).obs;
 
   String _myUserId = '';
   String get myUserId => _myUserId;
@@ -49,9 +51,15 @@ class StoryFeedController extends GetxController {
     String visibility = 'public',
   }) async {
     isLoading(true);
+    uploadProgress.value = 0.0;
     final me  = await LocalStorage.user;
     final res = await _repo.create(
-        filePath: filePath, type: type, visibility: visibility);
+      filePath: filePath,
+      type: type,
+      visibility: visibility,
+      onProgress: (p) => uploadProgress.value = p,
+    );
+    uploadProgress.value = -1.0;
     isLoading(false);
 
     if (res.success && res.data != null) {

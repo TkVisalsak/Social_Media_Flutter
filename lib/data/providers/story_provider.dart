@@ -10,13 +10,15 @@ class StoryProvider {
     required String filePath,
     String type = 'image',
     String visibility = 'public',
+    void Function(int, int)? onSendProgress,
   }) async {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),
       'type': type,
       'visibility': visibility,
     });
-    return _dio.post(ApiEndpoints.stories, data: form);
+    return _dio.post(ApiEndpoints.stories,
+        data: form, onSendProgress: onSendProgress);
   }
 
   Future<Response<dynamic>> feed() => _dio.get(ApiEndpoints.storyFeed);

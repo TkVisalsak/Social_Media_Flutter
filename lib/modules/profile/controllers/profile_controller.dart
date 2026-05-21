@@ -47,7 +47,9 @@ class ProfileController extends GetxController {
   // contentId → PostModel for feed-type reposts (populated in _loadContent)
   final repostPostCache  = <String, PostModel>{};
   final likedPosts       = <PostModel>[].obs;
+  final likedShorts      = <ShortModel>[].obs;
   final savedPosts       = <PostModel>[].obs;
+  final savedShorts      = <ShortModel>[].obs;
   final isContentLoading = false.obs;
 
   String? _userId;
@@ -78,23 +80,25 @@ class ProfileController extends GetxController {
 
   Future<void> _loadContent() async {
     isContentLoading(true);
-
-    // Fetch posts, shorts, reposts, liked, saved, followers, and following concurrently
+    try {
+    // Fetch all data concurrently
     final postsF      = _feedRepo.getUserPosts(_userId!);
     final shortsF     = _shortRepo.getByUser(_userId!);
     final repostsF    = _repostRepo.getUserReposts(_userId!);
-    final likedF      = _feedRepo.getLikedPosts(_userId!);
+    final likedPostsF = _feedRepo.getLikedPosts(_userId!);
+    final likedShortF = _shortRepo.getLikedByUser(_userId!);
     final savedF      = _saveRepo.getSavedByUser(_userId!);
     final followersF  = _followRepo.getFollowers(_userId!);
     final followingF  = _followRepo.getFollowing(_userId!);
 
-    final postsRes     = await postsF;
-    final shortsRes    = await shortsF;
-    final repostsRes   = await repostsF;
-    final likedRes     = await likedF;
-    final savedRes     = await savedF;
-    final followersRes = await followersF;
-    final followingRes = await followingF;
+    final postsRes      = await postsF;
+    final shortsRes     = await shortsF;
+    final repostsRes    = await repostsF;
+    final likedRes      = await likedPostsF;
+    final likedShortRes = await likedShortF;
+    final savedRes      = await savedF;
+    final followersRes  = await followersF;
+    final followingRes  = await followingF;
 
     if (postsRes.success && postsRes.data != null) {
       myPosts.assignAll(postsRes.data!);
@@ -126,19 +130,29 @@ class ProfileController extends GetxController {
     if (likedRes.success && likedRes.data != null) {
       likedPosts.assignAll(likedRes.data!);
     }
+    if (likedShortRes.success && likedShortRes.data != null) {
+      likedShorts.assignAll(likedShortRes.data!);
+    }
     if (savedRes.success && savedRes.data != null) {
-      // SaveModel only has contentId — fetch each saved feed post individually
-      final saves = savedRes.data!
-          .where((s) => s.contentType == SaveContentType.feed)
-          .toList();
-      final fetched = await Future.wait(
-        saves.map((s) => _feedRepo.getPostById(s.contentId)),
+      // Separate feed and short saves
+      final feedSaves  = savedRes.data!.where((s) => s.contentType == SaveContentType.feed).toList();
+      final shortSaves = savedRes.data!.where((s) => s.contentType == SaveContentType.short).toList();
+
+      // Fetch saved feed posts
+      final fetchedPosts = await Future.wait(
+        feedSaves.map((s) => _feedRepo.getPostById(s.contentId)),
       );
-      final posts = fetched
+      savedPosts.assignAll(fetchedPosts
           .where((r) => r.success && r.data != null)
-          .map((r) => r.data!)
-          .toList();
-      savedPosts.assignAll(posts);
+          .map((r) => r.data!));
+
+      // Fetch saved shorts by ID
+      final fetchedShorts = await Future.wait(
+        shortSaves.map((s) => _shortRepo.getById(s.contentId)),
+      );
+      savedShorts.assignAll(fetchedShorts
+          .where((r) => r.success && r.data != null)
+          .map((r) => r.data!));
     }
 
     if (followersRes.success && followersRes.data != null) {
@@ -148,7 +162,11 @@ class ProfileController extends GetxController {
       followingCount(followingRes.data!.length);
     }
 
-    isContentLoading(false);
+    } catch (_) {
+      // Any unexpected error still clears the loading state so the UI unlocks.
+    } finally {
+      isContentLoading(false);
+    }
   }
 
   String? get userId => _userId;

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/models/repost_model.dart';
+import '../../../data/models/short_model.dart';
 import '../../../shared/widgets/social_action_buttons.dart';
 import '../../feed/controllers/feed_controller.dart';
 import '../../shorts/screens/user_shorts_player.dart';
@@ -351,7 +352,6 @@ class _ShortsGrid extends StatelessWidget {
         itemCount: shorts.length,
         itemBuilder: (_, i) {
           final short = shorts[i];
-          final thumb = short.thumbnailUrl;
           return GestureDetector(
             onTap: () => Navigator.push(
               context,
@@ -362,41 +362,7 @@ class _ShortsGrid extends StatelessWidget {
                 ),
               ),
             ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (thumb != null && thumb.isNotEmpty)
-                  Image.network(
-                    thumb,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (_, child, progress) => progress == null
-                        ? child
-                        : Container(color: Colors.grey[200]),
-                    errorBuilder: (_, __, ___) =>
-                        Container(color: Colors.grey[300]),
-                  )
-                else
-                  Container(color: Colors.grey[300]),
-                const DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      stops: [0.5, 1.0],
-                      colors: [Colors.transparent, Colors.black54],
-                    ),
-                  ),
-                ),
-                const Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: EdgeInsets.all(6),
-                    child: Icon(Icons.play_arrow_rounded,
-                        color: Colors.white, size: 22),
-                  ),
-                ),
-              ],
-            ),
+            child: _ShortThumbnail(short: short),
           );
         },
       );
@@ -576,6 +542,77 @@ class _LikeSaveRow extends StatelessWidget {
             ),
           );
         }),
+      ],
+    );
+  }
+}
+
+// ─── Short thumbnail with counts ──────────────────────────────────────────────
+
+class _ShortThumbnail extends StatelessWidget {
+  final ShortModel short;
+  const _ShortThumbnail({required this.short});
+
+  static String _fmt(int n) {
+    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
+    return '$n';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final thumb = short.thumbnailUrl;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        if (thumb != null && thumb.isNotEmpty)
+          Image.network(
+            thumb,
+            fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) =>
+                progress == null ? child : Container(color: Colors.grey[200]),
+            errorBuilder: (_, __, ___) => Container(color: Colors.grey[300]),
+          )
+        else
+          Container(color: Colors.grey[300]),
+        const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.45, 1.0],
+              colors: [Colors.transparent, Colors.black54],
+            ),
+          ),
+        ),
+        // Like + repost counts bottom-left
+        Positioned(
+          bottom: 5, left: 6,
+          child: Row(
+            children: [
+              const Icon(Icons.favorite_rounded, color: Colors.white, size: 13),
+              const SizedBox(width: 2),
+              Text(_fmt(short.likeCount),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              const Icon(Icons.repeat_rounded, color: Colors.white, size: 13),
+              const SizedBox(width: 2),
+              Text(_fmt(short.repostCount),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        // Play icon bottom-right
+        const Positioned(
+          bottom: 5, right: 6,
+          child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+        ),
       ],
     );
   }

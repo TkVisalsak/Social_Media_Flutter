@@ -9,12 +9,15 @@ import 'repo_helpers.dart';
 
 abstract class ShortRepository {
   Future<ApiResponse<List<ShortModel>>> getAllShorts();
-  Future<ApiResponse<List<ShortModel>>> getFriendsShorts();
+  Future<ApiResponse<List<ShortModel>>> getFollowingShorts();
   Future<ApiResponse<List<ShortModel>>> getByUser(String userId);
+  Future<ApiResponse<ShortModel>>       getById(String id);
+  Future<ApiResponse<List<ShortModel>>> getLikedByUser(String userId);
   Future<ApiResponse<ShortModel>> uploadShort({
     required String filePath,
     String? caption,
     int? duration,
+    void Function(double)? onProgress,
   });
   Future<ApiResponse<void>> recordView(String shortId);
   Future<ApiResponse<void>> toggleLike(String shortId);
@@ -57,9 +60,10 @@ class ShortRepositoryImpl implements ShortRepository {
   }
 
   @override
-  Future<ApiResponse<List<ShortModel>>> getFriendsShorts() async {
+  @override
+  Future<ApiResponse<List<ShortModel>>> getFollowingShorts() async {
     try {
-      final res = await _provider.getFriendsShorts();
+      final res = await _provider.getFollowingShorts();
       final list =
           RepoHelpers.extractList(res.data, keys: ['videos', 'shorts', 'data']);
       final shorts = list
@@ -72,9 +76,9 @@ class ShortRepositoryImpl implements ShortRepository {
       return ApiResponse.failure(e.message);
     } on DioException catch (e) {
       return ApiResponse.failure(
-          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load friends shorts'));
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load following shorts'));
     } catch (e) {
-      return ApiResponse.failure('Friends shorts error: $e');
+      return ApiResponse.failure('Following shorts error: $e');
     }
   }
 
@@ -100,14 +104,60 @@ class ShortRepositoryImpl implements ShortRepository {
   }
 
   @override
+  Future<ApiResponse<ShortModel>> getById(String id) async {
+    try {
+      final res = await _provider.getById(id);
+      final body = RepoHelpers.normalizeBody(res.data);
+      final raw  = RepoHelpers.asMap(body['video'] ?? body);
+      if (raw == null) return ApiResponse.failure('Short not found');
+      return ApiResponse.success(ShortModel.fromJson(raw));
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load short'));
+    } catch (e) {
+      return ApiResponse.failure('Short parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<List<ShortModel>>> getLikedByUser(String userId) async {
+    try {
+      final res  = await _provider.getLikedByUser(userId);
+      final list = RepoHelpers.extractList(res.data, keys: ['videos', 'shorts', 'data']);
+      final shorts = list
+          .map((e) => RepoHelpers.asMap(e))
+          .whereType<Map<String, dynamic>>()
+          .map(ShortModel.fromJson)
+          .toList();
+      return ApiResponse.success(shorts);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load liked shorts'));
+    } catch (e) {
+      return ApiResponse.failure('Liked shorts error: $e');
+    }
+  }
+
+  @override
   Future<ApiResponse<ShortModel>> uploadShort({
     required String filePath,
     String? caption,
     int? duration,
+    void Function(double)? onProgress,
   }) async {
     try {
       final res = await _provider.upload(
-          filePath: filePath, caption: caption, duration: duration);
+        filePath: filePath,
+        caption: caption,
+        duration: duration,
+        onSendProgress: onProgress == null
+            ? null
+            : (sent, total) { if (total > 0) onProgress(sent / total); },
+      );
       final body = RepoHelpers.normalizeBody(res.data);
       final raw = body['video'] ?? body['short'] ?? body;
       if (raw is! Map<String, dynamic>) {

@@ -19,6 +19,7 @@ abstract class FeedRepository {
   Future<ApiResponse<void>>            savePost(String postId);
   Future<ApiResponse<void>>            unsavePost(String postId);
   Future<ApiResponse<void>>            sharePost(String postId);
+  Future<ApiResponse<void>>            deletePost(String postId);
 }
 
 class FeedRepositoryImpl implements FeedRepository {
@@ -215,6 +216,20 @@ class FeedRepositoryImpl implements FeedRepository {
       return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to share post'));
     } catch (e) {
       return ApiResponse.failure('Share action failed: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<void>> deletePost(String postId) async {
+    try {
+      await _provider.deletePost(postId);
+      return const ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(_dioErrorMessage(e, fallback: 'Failed to delete post'));
+    } catch (e) {
+      return ApiResponse.failure('Delete post failed: $e');
     }
   }
 
