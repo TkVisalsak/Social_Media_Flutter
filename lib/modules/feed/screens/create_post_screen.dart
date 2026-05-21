@@ -69,7 +69,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   List<XFile>      _images    = [];
   List<String>     _tagged    = [];
   String?          _feeling;
-  String?          _location;
   bool             _isPosting = false;
 
   @override
@@ -120,34 +119,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     if (result != null) setState(() => _feeling = result);
   }
 
-  Future<void> _pickLocation() async {
-    final ctrl = TextEditingController(text: _location);
-    final result = await showDialog<String>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Check in'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'Enter a location...',
-            prefixIcon: Icon(Icons.location_on_outlined),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, ctrl.text.trim()),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-    ctrl.dispose();
-    if (result != null && result.isNotEmpty) setState(() => _location = result);
-    if (result != null && result.isEmpty) setState(() => _location = null);
-  }
-
   Future<void> _tagPeople() async {
     final result = await showModalBottomSheet<List<String>>(
       context:            context,
@@ -175,7 +146,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       caption:      caption.isEmpty ? null : caption,
       imagePaths:   _images.map((x) => x.path).toList(),
       visibility:   visibility,
-      location:     _location,
       feeling:      _feeling,
       taggedUsers:  _tagged,
     );
@@ -226,8 +196,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       ),
                     ),
 
-                    // Active badges (feeling / location / tagged)
-                    if (_feeling != null || _location != null || _tagged.isNotEmpty)
+                    // Active badges (feeling / tagged)
+                    if (_feeling != null || _tagged.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: Wrap(
@@ -239,12 +209,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                                 label:   _feeling!,
                                 color:   const Color(0xFFFFF3CD),
                                 onClose: () => setState(() => _feeling = null),
-                              ),
-                            if (_location != null)
-                              _Badge(
-                                label:   '📍 $_location',
-                                color:   const Color(0xFFFFE8E8),
-                                onClose: () => setState(() => _location = null),
                               ),
                             if (_tagged.isNotEmpty)
                               _Badge(
@@ -273,11 +237,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
             // ── Add-to-post bar ───────────────────────────────────────────
             _AddToPostBar(
-              onPhoto:    _pickImages,
-              onCamera:   _pickCamera,
-              onTag:      _tagPeople,
-              onFeeling:  _pickFeeling,
-              onLocation: _pickLocation,
+              onPhoto:   _pickImages,
+              onCamera:  _pickCamera,
+              onTag:     _tagPeople,
+              onFeeling: _pickFeeling,
             ),
           ],
         ),
@@ -517,14 +480,12 @@ class _AddToPostBar extends StatelessWidget {
   final VoidCallback onCamera;
   final VoidCallback onTag;
   final VoidCallback onFeeling;
-  final VoidCallback onLocation;
 
   const _AddToPostBar({
     required this.onPhoto,
     required this.onCamera,
     required this.onTag,
     required this.onFeeling,
-    required this.onLocation,
   });
 
   @override
@@ -550,11 +511,10 @@ class _AddToPostBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _BarBtn(icon: Icons.photo_library_rounded,    color: const Color(0xFF45BD62), label: 'Photo',    onTap: onPhoto),
-              _BarBtn(icon: Icons.camera_alt_rounded,       color: const Color(0xFF1877F2), label: 'Camera',   onTap: onCamera),
-              _BarBtn(icon: Icons.person_add_rounded,       color: const Color(0xFF1778F2), label: 'Tag',      onTap: onTag),
-              _BarBtn(icon: Icons.emoji_emotions_outlined,  color: const Color(0xFFF7B928), label: 'Feeling',  onTap: onFeeling),
-              _BarBtn(icon: Icons.location_on_rounded,      color: const Color(0xFFE02B2B), label: 'Check-in', onTap: onLocation),
+              _BarBtn(icon: Icons.photo_library_rounded,   color: const Color(0xFF45BD62), label: 'Photo',   onTap: onPhoto),
+              _BarBtn(icon: Icons.camera_alt_rounded,      color: const Color(0xFF1877F2), label: 'Camera',  onTap: onCamera),
+              _BarBtn(icon: Icons.person_add_rounded,      color: const Color(0xFF1778F2), label: 'Tag',     onTap: onTag),
+              _BarBtn(icon: Icons.emoji_emotions_outlined, color: const Color(0xFFF7B928), label: 'Feeling', onTap: onFeeling),
             ],
           ),
         ],
