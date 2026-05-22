@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../app/routes/app_routes.dart';
 import '../../../data/models/comment_model.dart';
 import '../../../data/models/user_model.dart';
 import '../../../data/providers/local_storage.dart';
@@ -248,6 +249,15 @@ class _ReelCommentTileState extends State<_ReelCommentTile> {
     final username = c.user.username ?? c.user.fullName ?? 'user';
     final pic      = c.user.profilePic;
 
+    void openProfile() {
+      if (isOwn) {
+        Get.back();
+        Get.toNamed(AppRoutes.PROFILE);
+      } else {
+        Get.toNamed(AppRoutes.OTHER_PROFILE, arguments: c.user);
+      }
+    }
+
     return GestureDetector(
       onLongPress: isOwn ? () => widget.onDelete(c) : null,
       child: Padding(
@@ -255,33 +265,39 @@ class _ReelCommentTileState extends State<_ReelCommentTile> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.grey[200],
-              backgroundImage: (pic != null && pic.isNotEmpty)
-                  ? NetworkImage(pic)
-                  : null,
-              child: (pic == null || pic.isEmpty)
-                  ? Text(username[0].toUpperCase(),
-                      style: const TextStyle(fontSize: 14))
-                  : null,
+            GestureDetector(
+              onTap: openProfile,
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.grey[200],
+                backgroundImage: (pic != null && pic.isNotEmpty)
+                    ? NetworkImage(pic)
+                    : null,
+                child: (pic == null || pic.isEmpty)
+                    ? Text(username[0].toUpperCase(),
+                        style: const TextStyle(fontSize: 14))
+                    : null,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(
-                          color: Colors.black, fontSize: 14),
-                      children: [
-                        TextSpan(
-                            text: '$username ',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700)),
-                        TextSpan(text: c.text),
-                      ],
+                  GestureDetector(
+                    onTap: openProfile,
+                    child: RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                            color: Colors.black, fontSize: 14),
+                        children: [
+                          TextSpan(
+                              text: '$username ',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w700)),
+                          TextSpan(text: c.text),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 4),

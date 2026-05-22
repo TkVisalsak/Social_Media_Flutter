@@ -67,15 +67,6 @@ class EditProfileView extends GetView<ProfileController> {
             _buildEditField('Name',    controller.name),
             _buildEditField('Bio',     controller.bio),
             _buildEditField('Website', controller.website),
-            const Divider(),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton(
-                onPressed: () {},
-                child: const Text('Switch to Professional Account',
-                    style: TextStyle(color: Color(0xFF0095F6))),
-              ),
-            ),
           ],
         ),
       ),

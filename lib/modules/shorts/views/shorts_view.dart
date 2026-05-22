@@ -127,11 +127,8 @@ class _TopBar extends StatelessWidget {
               );
             }),
             const Spacer(),
-            // ── Search button ─────────────────────────────────
-            GestureDetector(
-              onTap: () => Get.toNamed(AppRoutes.SEARCH),
-              child: const Icon(Icons.search_rounded, color: Colors.white, size: 26),
-            ),
+            // Placeholder matching plus-icon width to keep tabs centred
+            const SizedBox(width: 28),
           ],
         ),
       ),

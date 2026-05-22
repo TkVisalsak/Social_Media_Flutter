@@ -16,6 +16,7 @@ class ChatMessage {
   final String  text;
   final bool    isMe;
   final bool    isImage;
+  final String? imageUrl;    // local file path or network URL
   final String? senderName;
   final String? senderAvatar;
   ChatMessage({
@@ -23,6 +24,7 @@ class ChatMessage {
     required this.text,
     required this.isMe,
     this.isImage      = false,
+    this.imageUrl     ,
     this.senderName   ,
     this.senderAvatar ,
   });
@@ -186,7 +188,7 @@ class ChatViewController extends GetxController {
     if (_conversationId == null && _otherUserId == null) return;
 
     final tempId = '_temp_img_${DateTime.now().millisecondsSinceEpoch}';
-    messages.add(ChatMessage(id: tempId, text: '📷 Photo', isMe: true, isImage: true));
+    messages.add(ChatMessage(id: tempId, text: '📷 Photo', isMe: true, isImage: true, imageUrl: filePath));
     _scrollToBottom();
 
     isSending(true);
@@ -226,6 +228,7 @@ class ChatViewController extends GetxController {
       text:         m.text ?? (m.image != null ? '📷 Photo' : ''),
       isMe:         mine,
       isImage:      m.image != null && m.text == null,
+      imageUrl:     m.image,
       senderName:   mine ? null : (m.sender.username ?? m.sender.fullName),
       senderAvatar: mine ? null : m.sender.profilePic,
     );

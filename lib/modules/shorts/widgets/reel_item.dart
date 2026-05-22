@@ -389,7 +389,7 @@ class _ReelItemState extends State<ReelItem> {
   @override
   Widget build(BuildContext context) {
     final bottomPad     = MediaQuery.of(context).padding.bottom;
-    final contentBottom = bottomPad + widget.navBarH + 4;
+    final contentBottom = bottomPad + 10;
     final username      = widget.short.user.username ?? widget.short.user.fullName ?? 'user';
     final profilePic    = widget.short.user.profilePic;
 
@@ -450,7 +450,7 @@ class _ReelItemState extends State<ReelItem> {
 
             // ── Right actions ────────────────────────────────
             Positioned(
-              right: 10,
+              right: 4,
               bottom: contentBottom,
               child: Column(
                 children: [
@@ -476,7 +476,6 @@ class _ReelItemState extends State<ReelItem> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
 
                   // ── Like button ───────────────────────────────
                   Obx(() {
@@ -493,7 +492,7 @@ class _ReelItemState extends State<ReelItem> {
                       axis: Axis.vertical,
                     );
                   }),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // ── Comment button ────────────────────────────
                   Obx(() {
@@ -506,7 +505,7 @@ class _ReelItemState extends State<ReelItem> {
                       onTap: _openComments,
                     );
                   }),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // ── Repost button (no count) ──────────────────
                   IgnorePointer(
@@ -522,7 +521,7 @@ class _ReelItemState extends State<ReelItem> {
                       axis: Axis.vertical,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // ── Save button ───────────────────────────────
                   GestureDetector(
@@ -537,7 +536,7 @@ class _ReelItemState extends State<ReelItem> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   // ── Share button ──────────────────────────────
                   Obx(() {
@@ -551,7 +550,7 @@ class _ReelItemState extends State<ReelItem> {
                       mirrorX: true,
                     );
                   }),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
 
                   _ActionBtn(icon: Icons.more_horiz_rounded, label: '', onTap: _openMore),
                 ],

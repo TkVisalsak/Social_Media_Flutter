@@ -98,12 +98,6 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
                         letterSpacing: -0.5)),
               ),
               IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.photo_camera_outlined,
-                    color: Colors.black, size: 26),
-                splashRadius: 22,
-              ),
-              IconButton(
                 onPressed: () => Navigator.push(context,
                     MaterialPageRoute(
                         builder: (_) => const NewMessageScreen())),

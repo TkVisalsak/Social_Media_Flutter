@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -143,6 +145,10 @@ class ChatView extends StatelessWidget {
   Widget _buildMessage(ChatMessage msg, {required bool showSender}) {
     final isMe = msg.isMe;
 
+    Widget bubble = msg.isImage && msg.imageUrl != null
+        ? _buildImageBubble(msg)
+        : _buildTextBubble(msg);
+
     // For group chats, prepend avatar + name to received messages.
     if (showSender && !isMe) {
       return Padding(
@@ -150,7 +156,6 @@ class ChatView extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Sender avatar — radius 20 keeps visual weight proportional to bubble
             CircleAvatar(
               radius: 20,
               backgroundColor: Colors.grey[300],
@@ -183,19 +188,7 @@ class ChatView extends StatelessWidget {
                           fontWeight: FontWeight.w500),
                     ),
                   ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
-                  constraints:
-                      BoxConstraints(maxWidth: Get.width * 0.60),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFEFEF),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Text(msg.text,
-                      style: const TextStyle(
-                          color: Colors.black, fontSize: 15)),
-                ),
+                bubble,
               ],
             ),
           ],
@@ -203,24 +196,61 @@ class ChatView extends StatelessWidget {
       );
     }
 
-    // DM or own message — original simple bubble.
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        constraints: BoxConstraints(maxWidth: Get.width * 0.7),
-        decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF3797F0) : const Color(0xFFEFEFEF),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          msg.text,
-          style: TextStyle(
-              color: isMe ? Colors.white : Colors.black, fontSize: 15),
-        ),
+      child: bubble,
+    );
+  }
+
+  Widget _buildTextBubble(ChatMessage msg) {
+    final isMe = msg.isMe;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      constraints: BoxConstraints(maxWidth: Get.width * 0.7),
+      decoration: BoxDecoration(
+        color: isMe ? const Color(0xFF3797F0) : const Color(0xFFEFEFEF),
+        borderRadius: BorderRadius.circular(20),
       ),
+      child: Text(
+        msg.text,
+        style: TextStyle(
+            color: isMe ? Colors.white : Colors.black, fontSize: 15),
+      ),
+    );
+  }
+
+  Widget _buildImageBubble(ChatMessage msg) {
+    final url = msg.imageUrl!;
+    final isLocal = !url.startsWith('http');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      constraints: BoxConstraints(maxWidth: Get.width * 0.65),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.grey[200],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: isLocal
+          ? Image.file(File(url), fit: BoxFit.cover)
+          : Image.network(
+              url,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, progress) => progress == null
+                  ? child
+                  : const SizedBox(
+                      width: 180,
+                      height: 180,
+                      child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2)),
+                    ),
+              errorBuilder: (_, __, ___) => const SizedBox(
+                width: 180,
+                height: 120,
+                child: Icon(Icons.broken_image_outlined, color: Colors.grey),
+              ),
+            ),
     );
   }
 
@@ -273,23 +303,31 @@ class ChatView extends StatelessWidget {
                 ),
               Row(
                 children: [
-                  Container(
-                    margin: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                        color: Color(0xFF3797F0), shape: BoxShape.circle),
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      onPressed: () async {
-                        final picker = ImagePicker();
-                        final picked = await picker.pickImage(
-                          source: ImageSource.camera,
-                          imageQuality: 80,
-                        );
-                        if (picked != null) {
-                          ctrl.sendImageFile(picked.path);
-                        }
-                      },
-                    ),
+                  // Gallery picker
+                  IconButton(
+                    icon: const Icon(Icons.photo_outlined,
+                        color: Color(0xFF3797F0), size: 26),
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final picked = await picker.pickImage(
+                        source: ImageSource.gallery,
+                        imageQuality: 80,
+                      );
+                      if (picked != null) ctrl.sendImageFile(picked.path);
+                    },
+                  ),
+                  // Camera
+                  IconButton(
+                    icon: const Icon(Icons.camera_alt_outlined,
+                        color: Color(0xFF3797F0), size: 26),
+                    onPressed: () async {
+                      final picker = ImagePicker();
+                      final picked = await picker.pickImage(
+                        source: ImageSource.camera,
+                        imageQuality: 80,
+                      );
+                      if (picked != null) ctrl.sendImageFile(picked.path);
+                    },
                   ),
                   Expanded(
                     child: Container(
