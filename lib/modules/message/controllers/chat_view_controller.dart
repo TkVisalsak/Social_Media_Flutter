@@ -219,6 +219,22 @@ class ChatViewController extends GetxController {
     }
   }
 
+  // ── Delete ────────────────────────────────────────────────────
+
+  Future<void> deleteMessage(String messageId) async {
+    // Optimistically remove from the list.
+    final removed = messages.firstWhereOrNull((m) => m.id == messageId);
+    messages.removeWhere((m) => m.id == messageId);
+
+    final res = await _repo.deleteMessage(messageId);
+    if (!res.success) {
+      // Restore on failure.
+      if (removed != null) messages.add(removed);
+      Get.snackbar('Error', res.error ?? 'Failed to delete message',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
+
   // ── Helpers ───────────────────────────────────────────────────
 
   ChatMessage _toDisplay(MessageModel m) {

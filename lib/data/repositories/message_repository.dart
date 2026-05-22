@@ -25,6 +25,7 @@ abstract class MessageRepository {
   });
   Future<ApiResponse<List<MessageModel>>> getConversationMessages(
       String conversationId);
+  Future<ApiResponse<void>> deleteMessage(String messageId);
 }
 
 class MessageRepositoryImpl implements MessageRepository {
@@ -172,6 +173,21 @@ class MessageRepositoryImpl implements MessageRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load messages'));
     } catch (e) {
       return ApiResponse.failure('Conversation messages parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<void>> deleteMessage(String messageId) async {
+    try {
+      await _provider.deleteMessage(messageId);
+      return ApiResponse.success(null);
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to delete message'));
+    } catch (e) {
+      return ApiResponse.failure('Delete failed: $e');
     }
   }
 

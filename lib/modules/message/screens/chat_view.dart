@@ -128,9 +128,14 @@ class ChatView extends StatelessWidget {
                 itemCount: ctrl.messages.length,
                 itemBuilder: (context, index) {
                   final msg = ctrl.messages[index];
-                  return _buildMessage(
-                    msg,
-                    showSender: ctrl.isGroup.value,
+                  return GestureDetector(
+                    onLongPress: msg.isMe
+                        ? () => _showDeleteSheet(context, ctrl, msg.id)
+                        : null,
+                    child: _buildMessage(
+                      msg,
+                      showSender: ctrl.isGroup.value,
+                    ),
                   );
                 },
               );
@@ -138,6 +143,49 @@ class ChatView extends StatelessWidget {
           ),
           _buildMessageInput(ctrl),
         ],
+      ),
+    );
+  }
+
+  void _showDeleteSheet(
+      BuildContext context, ChatViewController ctrl, String messageId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: Colors.red),
+              title: const Text('Delete message',
+                  style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Get.back();
+                ctrl.deleteMessage(messageId);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.close_rounded),
+              title: const Text('Cancel'),
+              onTap: () => Get.back(),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
