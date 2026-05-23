@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -19,8 +17,6 @@ class OnboardingProfileView extends GetView<OnboardingController> {
           const SizedBox(height: 8),
           const OnboardTitle("Let's create your profile"),
           const SizedBox(height: 24),
-          _AvatarPicker(controller: controller),
-          const SizedBox(height: 20),
           _Field(label: 'First name', onChanged: controller.firstName.call),
           const SizedBox(height: 12),
           _Field(label: 'Last name', onChanged: controller.lastName.call),
@@ -41,68 +37,6 @@ class OnboardingProfileView extends GetView<OnboardingController> {
               )),
         ],
       ),
-    );
-  }
-}
-
-class _AvatarPicker extends StatelessWidget {
-  const _AvatarPicker({required this.controller});
-  final OnboardingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Obx(() {
-          final path = controller.pickedImagePath.value;
-          return Stack(
-            children: [
-              CircleAvatar(
-                radius: 48,
-                backgroundColor: const Color(0xFFDBEAFE),
-                backgroundImage: path != null ? FileImage(File(path)) : null,
-                child: path == null
-                    ? const Icon(Icons.person,
-                        size: 54, color: Color(0xFF1E40AF))
-                    : null,
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: const Icon(Icons.add, size: 18, color: Colors.white),
-                ),
-              ),
-            ],
-          );
-        }),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: () {
-            // Hook up image_picker when the dependency is added.
-            // controller.pickedImagePath(<picked path>);
-            Get.snackbar(
-              'Photo upload',
-              'Add image_picker dependency to enable',
-              snackPosition: SnackPosition.BOTTOM,
-            );
-          },
-          child: const Text(
-            'Add profile photo',
-            style: TextStyle(
-              color: Color(0xFF2563EB),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

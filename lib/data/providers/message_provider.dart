@@ -47,6 +47,19 @@ class MessageProvider {
   Future<Response<dynamic>> getConversationMessages(String conversationId) =>
       _dio.get('${ApiEndpoints.conversations}/$conversationId/messages');
 
+  Future<Response<dynamic>> sendConversationMessage(
+    String conversationId, {
+    String? text,
+    String? image,
+  }) =>
+      _dio.post(
+        '${ApiEndpoints.conversations}/$conversationId/messages',
+        data: {
+          if (text  != null) 'text':  text,
+          if (image != null) 'image': image,
+        },
+      );
+
   Future<Response<dynamic>> deleteMessage(String messageId) =>
       _dio.delete('${ApiEndpoints.messages}/$messageId');
 }

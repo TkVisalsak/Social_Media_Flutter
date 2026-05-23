@@ -98,9 +98,14 @@ class _ChatScreenBodyState extends State<_ChatScreenBody> {
                         letterSpacing: -0.5)),
               ),
               IconButton(
-                onPressed: () => Navigator.push(context,
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
                     MaterialPageRoute(
-                        builder: (_) => const NewMessageScreen())),
+                        builder: (_) => const NewMessageScreen()),
+                  );
+                  widget.controller.fetchConversations(refresh: true);
+                },
                 icon: const Icon(Icons.edit_square,
                     color: Colors.black, size: 24),
                 splashRadius: 22,

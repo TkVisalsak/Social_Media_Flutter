@@ -78,12 +78,15 @@ class _NewMessageScreenState extends State<NewMessageScreen> {
     final res  = await repo.getOrCreateDm(u.id);
     if (!mounted) return;
     if (res.success && res.data != null) {
-      // Refresh conversation list so the new DM appears in DirectView.
       if (Get.isRegistered<DirectController>()) {
         Get.find<DirectController>().fetchConversations(refresh: true);
       }
       Navigator.pop(context);
-      Get.toNamed(AppRoutes.CHAT, arguments: res.data);
+      Get.toNamed(AppRoutes.CHAT, arguments: res.data)?.then((_) {
+        if (Get.isRegistered<DirectController>()) {
+          Get.find<DirectController>().fetchConversations(refresh: true);
+        }
+      });
     } else {
       Get.snackbar('Error', res.error ?? 'Cannot open DM',
           snackPosition: SnackPosition.BOTTOM);
@@ -134,9 +137,15 @@ class _NewMessageScreenState extends State<NewMessageScreen> {
     if (!mounted) return;
     setState(() => _loading = false);
     if (res.success && res.data != null) {
-      Get.find<DirectController>().fetchConversations();
+      if (Get.isRegistered<DirectController>()) {
+        Get.find<DirectController>().fetchConversations(refresh: true);
+      }
       Navigator.pop(context); // close NewMessageScreen
-      Get.toNamed(AppRoutes.CHAT, arguments: res.data);
+      Get.toNamed(AppRoutes.CHAT, arguments: res.data)?.then((_) {
+        if (Get.isRegistered<DirectController>()) {
+          Get.find<DirectController>().fetchConversations(refresh: true);
+        }
+      });
     } else {
       Get.snackbar('Error', res.error ?? 'Failed to create group',
           snackPosition: SnackPosition.BOTTOM);

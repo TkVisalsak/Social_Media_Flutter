@@ -163,31 +163,37 @@ class _NotificationTile extends StatelessWidget {
 
   String _typeLabel(String type) {
     switch (type) {
-      case 'like':    return 'liked your post.';
-      case 'comment': return 'commented on your post.';
-      case 'follow':  return 'started following you.';
+      case 'like':        return 'liked your post.';
+      case 'comment':     return 'commented on your post.';
+      case 'follow':      return 'started following you.';
+      case 'repost':      return 'reposted your content.';
+      case 'tag':         return 'tagged you in a post.';
       case 'story_reply': return 'replied to your story.';
-      default:        return 'interacted with you.';
+      default:            return 'interacted with you.';
     }
   }
 
   IconData _typeIcon(String type) {
     switch (type) {
-      case 'like':    return Icons.favorite_rounded;
-      case 'comment': return Icons.chat_bubble_rounded;
-      case 'follow':  return Icons.person_add_rounded;
+      case 'like':        return Icons.favorite_rounded;
+      case 'comment':     return Icons.chat_bubble_rounded;
+      case 'follow':      return Icons.person_add_rounded;
+      case 'repost':      return Icons.repeat_rounded;
+      case 'tag':         return Icons.alternate_email_rounded;
       case 'story_reply': return Icons.reply_rounded;
-      default:        return Icons.notifications_rounded;
+      default:            return Icons.notifications_rounded;
     }
   }
 
   Color _typeColor(String type) {
     switch (type) {
-      case 'like':    return const Color(0xFFFF4D6D);
-      case 'comment': return const Color(0xFF3797F0);
-      case 'follow':  return const Color(0xFF45BD62);
+      case 'like':        return const Color(0xFFFF4D6D);
+      case 'comment':     return const Color(0xFF3797F0);
+      case 'follow':      return const Color(0xFF45BD62);
+      case 'repost':      return const Color(0xFFFF9500);
+      case 'tag':         return const Color(0xFF00BCD4);
       case 'story_reply': return const Color(0xFF8B5CF6);
-      default:        return Colors.grey;
+      default:            return Colors.grey;
     }
   }
 

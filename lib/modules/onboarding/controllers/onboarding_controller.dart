@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../data/models/hobby_model.dart';
@@ -39,6 +40,14 @@ class OnboardingController extends GetxController {
   final isSuggestionsLoading = false.obs;
   final isSaving = false.obs;
   final error = ''.obs;
+
+  Future<void> pickImage() async {
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked != null) pickedImagePath(picked.path);
+  }
 
   void toggleHobby(String name) {
     if (selectedHobbies.contains(name)) {

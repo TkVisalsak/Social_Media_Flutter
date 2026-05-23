@@ -25,6 +25,11 @@ abstract class MessageRepository {
   });
   Future<ApiResponse<List<MessageModel>>> getConversationMessages(
       String conversationId);
+  Future<ApiResponse<MessageModel>> sendConversationMessage(
+    String conversationId, {
+    String? text,
+    String? image,
+  });
   Future<ApiResponse<void>> deleteMessage(String messageId);
 }
 
@@ -173,6 +178,31 @@ class MessageRepositoryImpl implements MessageRepository {
           RepoHelpers.dioErrorMessage(e, fallback: 'Failed to load messages'));
     } catch (e) {
       return ApiResponse.failure('Conversation messages parse error: $e');
+    }
+  }
+
+  @override
+  Future<ApiResponse<MessageModel>> sendConversationMessage(
+    String conversationId, {
+    String? text,
+    String? image,
+  }) async {
+    try {
+      final res = await _provider.sendConversationMessage(
+          conversationId, text: text, image: image);
+      final body = RepoHelpers.normalizeBody(res.data);
+      final raw = body['data'] ?? body['message'] ?? body;
+      if (raw is! Map<String, dynamic>) {
+        return ApiResponse.failure('Invalid send response');
+      }
+      return ApiResponse.success(MessageModel.fromJson(raw));
+    } on AppException catch (e) {
+      return ApiResponse.failure(e.message);
+    } on DioException catch (e) {
+      return ApiResponse.failure(
+          RepoHelpers.dioErrorMessage(e, fallback: 'Failed to send message'));
+    } catch (e) {
+      return ApiResponse.failure('Send failed: $e');
     }
   }
 

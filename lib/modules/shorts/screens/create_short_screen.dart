@@ -118,6 +118,8 @@ class _CreateShortScreenState extends State<CreateShortScreen> {
     // Resolve the observable before the sheet builds to avoid Get.find
     // being called inside the modal builder's isolated context.
     final uploadProgress = Get.find<ShortsController>().uploadProgress;
+    // Capture top padding here — the modal strips it from its inner MediaQuery.
+    final topPad = MediaQuery.paddingOf(context).top;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -126,6 +128,7 @@ class _CreateShortScreenState extends State<CreateShortScreen> {
         file: file,
         captionCtrl: _captionCtrl,
         uploadProgress: uploadProgress,
+        topPad: topPad,
         onShare: _upload,
         onDiscard: () {
           setState(() => _video = null);
@@ -167,6 +170,7 @@ class _CaptionSheet extends StatefulWidget {
   final XFile                 file;
   final TextEditingController captionCtrl;
   final RxDouble              uploadProgress;
+  final double                topPad;
   final VoidCallback          onShare;
   final VoidCallback          onDiscard;
 
@@ -174,6 +178,7 @@ class _CaptionSheet extends StatefulWidget {
     required this.file,
     required this.captionCtrl,
     required this.uploadProgress,
+    required this.topPad,
     required this.onShare,
     required this.onDiscard,
   });
@@ -203,7 +208,6 @@ class _CaptionSheetState extends State<_CaptionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final topPad    = MediaQuery.paddingOf(context).top;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     final inset     = MediaQuery.viewInsetsOf(context).bottom;
 
@@ -290,7 +294,7 @@ class _CaptionSheetState extends State<_CaptionSheet> {
 
           // ── Top bar ───────────────────────────────────────────
           Positioned(
-            top: topPad + 8,
+            top: widget.topPad + 8,
             left: 14, right: 14,
             child: Row(
               children: [

@@ -15,7 +15,7 @@ class NotificationModel {
 
   final String id;
 
-  /// e.g. 'like', 'comment', 'follow', 'repost', 'mention'
+  /// 'like' | 'comment' | 'follow' | 'repost' | 'tag' | 'story_reply'
   final String type;
   final UserModel actor;
 

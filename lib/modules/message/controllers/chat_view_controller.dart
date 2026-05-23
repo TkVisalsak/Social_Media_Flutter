@@ -54,6 +54,7 @@ class ChatViewController extends GetxController {
 
   String? get otherUserId => _otherUserId;
   StreamSubscription<Map<String, dynamic>>? _msgSub;
+  StreamSubscription<Map<String, dynamic>>? _deleteSub;
 
   @override
   void onInit() {
@@ -120,7 +121,15 @@ class ChatViewController extends GetxController {
   // ── Socket ────────────────────────────────────────────────────
 
   void _subscribeSocket() {
-    _msgSub = _socket.messageStream.listen(_onSocketMessage);
+    _msgSub    = _socket.messageStream.listen(_onSocketMessage);
+    _deleteSub = _socket.deletedMessageStream.listen(_onSocketDelete);
+  }
+
+  void _onSocketDelete(Map<String, dynamic> raw) {
+    final msgId  = raw['messageId']?.toString();
+    final convId = (raw['conversationId'])?.toString();
+    if (msgId == null || convId != _conversationId) return;
+    messages.removeWhere((m) => m.id == msgId);
   }
 
   void _onSocketMessage(Map<String, dynamic> raw) {
@@ -175,7 +184,9 @@ class ChatViewController extends GetxController {
 
   Future<void> _sendViaHttp(String tempId, String text) async {
     isSending(true);
-    final res = await _repo.sendMessage(_otherUserId!, text: text);
+    final res = _conversationId != null
+        ? await _repo.sendConversationMessage(_conversationId!, text: text)
+        : await _repo.sendMessage(_otherUserId!, text: text);
     isSending(false);
     if (res.success && res.data != null) {
       final idx = messages.indexWhere((m) => m.id == tempId);
@@ -183,9 +194,9 @@ class ChatViewController extends GetxController {
     }
   }
 
-  /// Called when the user picks an image from the camera.
+  /// Called when the user picks an image from the gallery or camera.
   Future<void> sendImageFile(String filePath) async {
-    if (_conversationId == null && _otherUserId == null) return;
+    if (_conversationId == null) return;
 
     final tempId = '_temp_img_${DateTime.now().millisecondsSinceEpoch}';
     messages.add(ChatMessage(id: tempId, text: '📷 Photo', isMe: true, isImage: true, imageUrl: filePath));
@@ -196,8 +207,8 @@ class ChatViewController extends GetxController {
       final bytes = await File(filePath).readAsBytes();
       final base64Image = 'data:image/jpeg;base64,${base64Encode(bytes)}';
 
-      final res = await _repo.sendMessage(
-        _otherUserId ?? '',
+      final res = await _repo.sendConversationMessage(
+        _conversationId!,
         image: base64Image,
       );
 
@@ -205,7 +216,6 @@ class ChatViewController extends GetxController {
         final idx = messages.indexWhere((m) => m.id == tempId);
         if (idx != -1) messages[idx] = _toDisplay(res.data!);
       } else {
-        // Remove optimistic bubble on failure.
         messages.removeWhere((m) => m.id == tempId);
         Get.snackbar('Error', res.error ?? 'Failed to send image',
             snackPosition: SnackPosition.BOTTOM);
@@ -265,6 +275,7 @@ class ChatViewController extends GetxController {
   @override
   void onClose() {
     _msgSub?.cancel();
+    _deleteSub?.cancel();
     messageController.dispose();
     scrollController.dispose();
     super.onClose();

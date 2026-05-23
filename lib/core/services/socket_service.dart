@@ -20,12 +20,14 @@ class SocketService {
   final _notificationController = StreamController<Map<String, dynamic>>.broadcast();
   final _typingController       = StreamController<Map<String, dynamic>>.broadcast();
   final _onlineUsersController  = StreamController<List<String>>.broadcast();
+  final _deletedMessageController = StreamController<Map<String, dynamic>>.broadcast();
 
-  Stream<bool>                   get connectionStream   => _connectionController.stream;
-  Stream<Map<String, dynamic>>   get messageStream      => _messageController.stream;
-  Stream<Map<String, dynamic>>   get notificationStream => _notificationController.stream;
-  Stream<Map<String, dynamic>>   get typingStream       => _typingController.stream;
-  Stream<List<String>>           get onlineUsersStream  => _onlineUsersController.stream;
+  Stream<bool>                   get connectionStream      => _connectionController.stream;
+  Stream<Map<String, dynamic>>   get messageStream         => _messageController.stream;
+  Stream<Map<String, dynamic>>   get notificationStream    => _notificationController.stream;
+  Stream<Map<String, dynamic>>   get typingStream          => _typingController.stream;
+  Stream<List<String>>           get onlineUsersStream     => _onlineUsersController.stream;
+  Stream<Map<String, dynamic>>   get deletedMessageStream  => _deletedMessageController.stream;
 
   bool get isConnected => _socket?.connected ?? false;
 
@@ -54,12 +56,13 @@ class SocketService {
       ..onConnect((_)        => _connectionController.add(true))
       ..onDisconnect((_)     => _connectionController.add(false))
       ..onConnectError((err) => _connectionController.addError(err))
-      ..on('newMessage',  _handleMessage)
-      ..on('message',     _handleMessage)
-      ..on('notification',_handleNotification)
+      ..on('newMessage',     _handleMessage)
+      ..on('message',        _handleMessage)
+      ..on('notification',   _handleNotification)
       ..on('userTyping',        _handleTyping)
       ..on('userStoppedTyping', _handleTyping)
-      ..on('onlineUsers', _handleOnlineUsers);
+      ..on('onlineUsers',    _handleOnlineUsers)
+      ..on('deleteMessage',  _handleDeletedMessage);
 
     _socket!.connect();
   }
@@ -131,6 +134,11 @@ class SocketService {
     _onlineUsersController.add(ids);
   }
 
+  void _handleDeletedMessage(dynamic raw) {
+    final data = _asMap(raw);
+    if (data != null) _deletedMessageController.add(data);
+  }
+
   Map<String, dynamic>? _asMap(dynamic raw) {
     if (raw is Map<String, dynamic>) return raw;
     if (raw is Map) return Map<String, dynamic>.from(raw);
@@ -144,5 +152,6 @@ class SocketService {
     await _notificationController.close();
     await _typingController.close();
     await _onlineUsersController.close();
+    await _deletedMessageController.close();
   }
 }

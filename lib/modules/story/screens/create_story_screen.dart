@@ -242,6 +242,8 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
     // Resolve the observable before the sheet builds to avoid Get.find
     // being called inside the modal builder (which has a different context).
     final uploadProgress = Get.find<StoryFeedController>().uploadProgress;
+    // Capture top padding here — the modal strips it from its inner MediaQuery.
+    final topPad = MediaQuery.paddingOf(context).top;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -253,6 +255,7 @@ class _CreateStoryScreenState extends State<CreateStoryScreen> {
         username: _username,
         profilePic: _profilePic,
         uploadProgress: uploadProgress,
+        topPad: topPad,
         onPrivacyTap: () async {
           final result = await Navigator.push<String>(
             context,
@@ -302,6 +305,7 @@ class _StoryPreviewSheet extends StatefulWidget {
   final String       username;
   final String       profilePic;
   final RxDouble     uploadProgress;
+  final double       topPad;
   final VoidCallback onPrivacyTap;
   final VoidCallback onShare;
   final VoidCallback onDiscard;
@@ -313,6 +317,7 @@ class _StoryPreviewSheet extends StatefulWidget {
     required this.username,
     required this.profilePic,
     required this.uploadProgress,
+    required this.topPad,
     required this.onPrivacyTap,
     required this.onShare,
     required this.onDiscard,
@@ -357,7 +362,6 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
     return SizedBox(
       height: MediaQuery.sizeOf(context).height,
       child: Stack(
@@ -424,7 +428,7 @@ class _StoryPreviewSheetState extends State<_StoryPreviewSheet> {
 
           // ── Top bar ───────────────────────────────────────────
           Positioned(
-            top: topPad + 8,
+            top: widget.topPad + 8,
             left: 14, right: 14,
             child: Row(
               children: [
